@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kinocine Mini Photoshop v1</title>
+    <title>Kinocine Mini Photoshop v2</title>
     <!-- HEIC/HEIF 포맷 지원 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <style>
@@ -45,21 +45,22 @@
         /* 탭 스타일 */
         .tab-menu {
             display: flex;
-            gap: 10px;
+            gap: 6px;
             margin-bottom: 20px;
             border-bottom: 2px solid var(--border-color);
         }
         .tab-btn {
             flex: 1;
-            padding: 12px;
+            padding: 12px 8px;
             background: #f1f3f5;
             border: none;
             border-radius: 8px 8px 0 0;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
             color: #495057;
             cursor: pointer;
             transition: all 0.2s;
+            text-align: center;
         }
         .tab-btn.active {
             background: var(--primary-color);
@@ -73,7 +74,7 @@
         .dropzone {
             border: 2px dashed var(--primary-color);
             border-radius: 8px;
-            padding: 30px 20px;
+            padding: 25px 20px;
             text-align: center;
             cursor: pointer;
             background: #fff5f5;
@@ -133,7 +134,7 @@
         .btn:hover { background-color: #b80710; }
         .btn:disabled { background-color: #dee2e6; color: #868e96; cursor: not-allowed; }
 
-        /* 콜라주 캔버스 영역 */
+        /* 캔버스 공통 스타일 */
         .canvas-container {
             position: relative;
             max-width: 100%;
@@ -143,6 +144,7 @@
             background: #1a1a1a;
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             margin-bottom: 20px;
+            user-select: none;
         }
         canvas { display: block; margin: 0 auto; }
 
@@ -194,7 +196,7 @@
         }
         .status-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f3f5; font-size: 13px; }
 
-        /* 크롭 모달 */
+        /* 수동 멀티 크롭 모달 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center;
@@ -211,22 +213,56 @@
 <body>
 
 <div class="container">
-    <h1>Kinocine Mini Photoshop v1</h1>
+    <h1>Kinocine Mini Photoshop v2</h1>
 
-    <!-- 탭 메뉴 -->
+    <!-- 탭 메뉴 (순서 변경: 1. 크롭 / 2. 스마트리사이즈 / 3. 콜라주) -->
     <div class="tab-menu">
-        <button class="tab-btn active" onclick="switchTab('collage')">🎬 분할 콜라주 메이커</button>
-        <button class="tab-btn" onclick="switchTab('resizer')">⚡ 스마트 리사이저 & 크롭</button>
+        <button class="tab-btn active" onclick="switchTab('single-crop')">✂️ 자유 크롭 & 원본1000w</button>
+        <button class="tab-btn" onclick="switchTab('resizer')">⚡ 스마트 리사이즈 & 멀티크롭</button>
+        <button class="tab-btn" onclick="switchTab('collage')">🎬 분할 콜라주 메이커</button>
     </div>
 
     <!-- 공통 업로드 드롭존 -->
     <div class="dropzone" id="dropzone">
-        <p>📸 이미지 파일들을 클릭하여 선택하거나 여기에 드래그앤드롭 하세요</p>
+        <p id="dropzone-text">📸 이미지 파일들을 클릭하여 선택하거나 여기에 드래그앤드롭 하세요</p>
         <input type="file" id="file-input" multiple accept="image/*,.heic,.heif,.webp,.avif" style="display: none;">
     </div>
 
-    <!-- TAB 1: 분할 콜라주 메이커 -->
-    <div id="tab-collage" class="tab-content active">
+    <!-- TAB 1: 단일 자유 크롭 & 원본 1000px 리사이즈 [NEW] -->
+    <div id="tab-single-crop" class="tab-content active">
+        <div class="tip-box">
+            💡 <strong>사용 방법:</strong> 화면에서 마우스로 드래그하여 필요한 부분만 지정하세요. 지정한 <strong>크롭 사진(원본 크기)</strong>과 <strong>전체 원본 사진(가로 1000px 리사이즈)</strong> 2장이 날짜 폴더에 자동 저장됩니다.
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="crop-canvas"></canvas>
+        </div>
+
+        <button id="single-crop-process-btn" class="btn" disabled>지정 영역 크롭 + 원본 1000px 저장 시작</button>
+    </div>
+
+    <!-- TAB 2: 스마트 리사이즈 & 멀티 크롭 -->
+    <div id="tab-resizer" class="tab-content">
+        <div class="controls">
+            <div class="control-group">
+                <label>기본 이미지 가로 크기 (px)</label>
+                <input type="number" id="r-target-width" value="1000" min="10">
+            </div>
+            <div class="control-group">
+                <label>압축 품질</label>
+                <select id="r-img-quality">
+                    <option value="0.9" selected>고품질 (90%)</option>
+                    <option value="0.8">용량최적화 (80%)</option>
+                    <option value="0.95">원본수준 (95%)</option>
+                </select>
+            </div>
+        </div>
+
+        <button id="resizer-process-btn" class="btn" disabled>저장할 폴더 지정 및 변환 시작 (YYYY-MM-DD 폴더 자동생성)</button>
+    </div>
+
+    <!-- TAB 3: 분할 콜라주 메이커 -->
+    <div id="tab-collage" class="tab-content">
         <div class="tip-box">
             💡 <strong>사용 방법:</strong> 캔버스에서 마우스 드래그로 위치 조절, <strong>Ctrl + 마우스 휠</strong>로 확대/축소, 아래 목록에서 드래그하여 순서를 교체할 수 있습니다.
         </div>
@@ -266,29 +302,11 @@
         <button id="collage-download-btn" class="btn" disabled>🎬 완성된 콜라주 썸네일 다운로드</button>
     </div>
 
-    <!-- TAB 2: 스마트 리사이저 & 크롭 -->
-    <div id="tab-resizer" class="tab-content">
-        <div class="controls">
-            <div class="control-group">
-                <label>기본 이미지 가로 크기 (px)</label>
-                <input type="number" id="r-target-width" value="1000" min="10">
-            </div>
-            <div class="control-group">
-                <label>압축 품질</label>
-                <select id="r-img-quality">
-                    <option value="0.9" selected>고품질 (90%)</option>
-                    <option value="0.8">용량최적화 (80%)</option>
-                    <option value="0.95">원본수준 (95%)</option>
-                </select>
-            </div>
-        </div>
-
-        <button id="resizer-process-btn" class="btn" disabled>저장할 폴더 지정 및 변환 시작 (YYYY-MM-DD 폴더 자동생성)</button>
-        <div id="status-list" style="display: none;"></div>
-    </div>
+    <!-- 변환 상태 출력 박스 -->
+    <div id="status-list" style="display: none;"></div>
 </div>
 
-<!-- 수동 크롭 에디터 모달 -->
+<!-- 수동 멀티크롭 모달 (TAB 2 전용) -->
 <div class="modal-overlay" id="editor-modal">
     <div class="modal-content">
         <div style="text-align:center; margin-bottom:15px;">
@@ -318,41 +336,56 @@
 
 <script>
     // --- 글로벌 상태 및 엘리먼트 ---
-    let activeTab = 'collage';
+    let activeTab = 'single-crop';
     const dropzone = document.getElementById('dropzone');
+    const dropzoneText = document.getElementById('dropzone-text');
     const fileInput = document.getElementById('file-input');
-
-    // 콜라주 전용 변수
-    const canvas = document.getElementById('collage-canvas');
-    const ctx = canvas.getContext('2d');
-    const collageItemList = document.getElementById('collage-item-list');
-    const collageDownloadBtn = document.getElementById('collage-download-btn');
-    let collageImages = []; // { id, file, imgObj, offsetX, offsetY, zoom }
-    let activeDragIndex = -1, startX = 0, startY = 0, initialOffsetX = 0, initialOffsetY = 0, draggedCardIndex = null;
-
-    // 리사이저 전용 변수
-    const resizerBtn = document.getElementById('resizer-process-btn');
     const statusList = document.getElementById('status-list');
+
+    // TAB 1 (단일 자유 크롭) 변수
+    const cropCanvas = document.getElementById('crop-canvas');
+    const cropCtx = cropCanvas.getContext('2d');
+    const singleCropBtn = document.getElementById('single-crop-process-btn');
+    let singleImgData = null; // { file, imgObj }
+    let cropBox = { x: 50, y: 50, w: 200, h: 200 };
+    let isCropping = false, cropStartX = 0, cropStartY = 0;
+
+    // TAB 2 (스마트 리사이저) 변수
+    const resizerBtn = document.getElementById('resizer-process-btn');
     let loadedResizerImages = [];
     let currentEditIndex = 0;
     let getCropData720 = null, getCropData500 = null;
 
-    // 탭 전환
+    // TAB 3 (콜라주) 변수
+    const collageCanvas = document.getElementById('collage-canvas');
+    const collageCtx = collageCanvas.getContext('2d');
+    const collageItemList = document.getElementById('collage-item-list');
+    const collageDownloadBtn = document.getElementById('collage-download-btn');
+    let collageImages = []; 
+    let activeDragIndex = -1, startX = 0, startY = 0, initialOffsetX = 0, initialOffsetY = 0, draggedCardIndex = null;
+
+    // 탭 전환 함수
     function switchTab(tabName) {
         activeTab = tabName;
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
-        if (tabName === 'collage') {
+        if (tabName === 'single-crop') {
             document.querySelectorAll('.tab-btn')[0].classList.add('active');
-            document.getElementById('tab-collage').classList.add('active');
-        } else {
+            document.getElementById('tab-single-crop').classList.add('active');
+            dropzoneText.textContent = "📸 자르고 싶은 사진 1장을 클릭하거나 드래그앤드롭 하세요";
+        } else if (tabName === 'resizer') {
             document.querySelectorAll('.tab-btn')[1].classList.add('active');
             document.getElementById('tab-resizer').classList.add('active');
+            dropzoneText.textContent = "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
+        } else {
+            document.querySelectorAll('.tab-btn')[2].classList.add('active');
+            document.getElementById('tab-collage').classList.add('active');
+            dropzoneText.textContent = "📸 콜라주 합성할 사진들을 드래그앤드롭 하세요";
         }
     }
 
-    // 파일 로드 공통 처리
+    // 파일 업로드 공통 이벤트
     dropzone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#111'; });
@@ -367,18 +400,19 @@
         const validFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.name.match(/\.(heic|heif|webp|avif)$/i));
         if (validFiles.length === 0) return;
 
-        if (activeTab === 'collage') {
-            for (const file of validFiles) {
-                try {
-                    const imgObj = await loadImage(file);
-                    collageImages.push({ id: Date.now() + Math.random(), file, imgObj, offsetX: 0, offsetY: 0, zoom: 1.0 });
-                } catch (err) { console.error("이미지 로드 오류:", err); }
-            }
-            updateCollageUI();
-            renderCollageCanvas();
-        } else {
+        if (activeTab === 'single-crop') {
+            // TAB 1: 첫 번째 사진 1장만 등록 처리
+            try {
+                const imgObj = await loadImage(validFiles[0]);
+                singleImgData = { file: validFiles[0], imgObj };
+                singleCropBtn.disabled = false;
+                initSingleCropCanvas();
+            } catch (err) { console.error(err); }
+
+        } else if (activeTab === 'resizer') {
+            // TAB 2: 스마트 리사이저
             loadedResizerImages = [];
-            dropzone.querySelector('p').innerHTML = `⏳ 이미지 로딩 중...`;
+            dropzoneText.innerHTML = `⏳ 이미지 로딩 중...`;
             resizerBtn.disabled = true;
 
             for (const file of validFiles) {
@@ -392,6 +426,17 @@
                 currentEditIndex = 0;
                 openCropEditor();
             }
+
+        } else {
+            // TAB 3: 콜라주
+            for (const file of validFiles) {
+                try {
+                    const imgObj = await loadImage(file);
+                    collageImages.push({ id: Date.now() + Math.random(), file, imgObj, offsetX: 0, offsetY: 0, zoom: 1.0 });
+                } catch (err) { console.error("이미지 로드 오류:", err); }
+            }
+            updateCollageUI();
+            renderCollageCanvas();
         }
     }
 
@@ -416,162 +461,137 @@
         });
     }
 
-    // ================= 콜라주 로직 =================
-    ['c-width', 'c-height', 'c-border-w', 'c-border-color'].forEach(id => {
-        document.getElementById(id).addEventListener('input', renderCollageCanvas);
-    });
+    // ================= [TAB 1] 단일 크롭 로직 =================
+    function initSingleCropCanvas() {
+        if (!singleImgData) return;
+        const img = singleImgData.imgObj;
+        
+        // 캔버스 크기를 컨테이너 폭에 맞춤 (최대 850px)
+        const displayW = Math.min(850, img.width);
+        const displayH = img.height * (displayW / img.width);
 
-    function updateCollageUI() {
-        collageItemList.innerHTML = '';
-        collageImages.forEach((item, index) => {
-            const card = document.createElement('div');
-            card.className = 'item-card';
-            card.draggable = true;
-            card.innerHTML = `
-                <span style="color:#adb5bd; cursor:grab;">☰</span>
-                <img src="${item.imgObj.src}" class="item-thumb">
-                <div class="item-info">
-                    <div class="item-name">${index + 1}번: ${item.file.name}</div>
-                    <div style="font-size:11px; color:#868e96;">배율: ${(item.zoom * 100).toFixed(0)}%</div>
-                </div>
-                <button class="btn-small btn-danger" onclick="removeCollageItem(${index})">삭제</button>
-            `;
+        cropCanvas.width = displayW;
+        cropCanvas.height = displayH;
 
-            card.addEventListener('dragstart', () => { draggedCardIndex = index; card.classList.add('dragging'); });
-            card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedCardIndex = null; });
-            card.addEventListener('dragover', (e) => e.preventDefault());
-            card.addEventListener('drop', (e) => {
-                e.preventDefault();
-                if (draggedCardIndex !== null && draggedCardIndex !== index) {
-                    const movedItem = collageImages.splice(draggedCardIndex, 1)[0];
-                    collageImages.splice(index, 0, movedItem);
-                    updateCollageUI();
-                    renderCollageCanvas();
-                }
-            });
-            collageItemList.appendChild(card);
-        });
-        collageDownloadBtn.disabled = collageImages.length === 0;
+        // 초기 크롭 박스 (중앙 50% 크기)
+        cropBox = {
+            x: displayW * 0.25,
+            y: displayH * 0.25,
+            w: displayW * 0.5,
+            h: displayH * 0.5
+        };
+
+        renderSingleCropCanvas();
     }
 
-    window.removeCollageItem = function(index) {
-        collageImages.splice(index, 1);
-        updateCollageUI();
-        renderCollageCanvas();
-    };
+    function renderSingleCropCanvas() {
+        if (!singleImgData) return;
+        const img = singleImgData.imgObj;
+        
+        cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+        cropCtx.drawImage(img, 0, 0, cropCanvas.width, cropCanvas.height);
 
-    function renderCollageCanvas() {
-        const cWidth = parseInt(document.getElementById('c-width').value) || 1000;
-        const cHeight = parseInt(document.getElementById('c-height').value) || 588;
-        const borderW = parseInt(document.getElementById('c-border-w').value) || 0;
-        const borderColor = document.getElementById('c-border-color').value;
+        // 어두운 반투명 오버레이
+        cropCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
 
-        canvas.width = cWidth;
-        canvas.height = cHeight;
-        ctx.clearRect(0, 0, cWidth, cHeight);
+        // 크롭 박스 영역 밝게 표시
+        cropCtx.drawImage(
+            img,
+            (cropBox.x / cropCanvas.width) * img.width,
+            (cropBox.y / cropCanvas.height) * img.height,
+            (cropBox.w / cropCanvas.width) * img.width,
+            (cropBox.h / cropCanvas.height) * img.height,
+            cropBox.x, cropBox.y, cropBox.w, cropBox.h
+        );
 
-        const count = collageImages.length;
-        if (count === 0) {
-            ctx.fillStyle = '#222';
-            ctx.fillRect(0, 0, cWidth, cHeight);
-            ctx.fillStyle = '#888';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('이미지를 업로드하세요', cWidth / 2, cHeight / 2);
+        // 크롭 테두리 선
+        cropCtx.strokeStyle = '#e50914';
+        cropCtx.lineWidth = 2;
+        cropCtx.strokeRect(cropBox.x, cropBox.y, cropBox.w, cropBox.h);
+    }
+
+    // 마우스 드래그로 자유 크롭 상자 그리기
+    cropCanvas.addEventListener('mousedown', (e) => {
+        const rect = cropCanvas.getBoundingClientRect();
+        cropStartX = e.clientX - rect.left;
+        cropStartY = e.clientY - rect.top;
+        isCropping = true;
+        cropBox = { x: cropStartX, y: cropStartY, w: 0, h: 0 };
+    });
+
+    cropCanvas.addEventListener('mousemove', (e) => {
+        if (!isCropping) return;
+        const rect = cropCanvas.getBoundingClientRect();
+        const curX = e.clientX - rect.left;
+        const curY = e.clientY - rect.top;
+
+        cropBox.x = Math.min(cropStartX, curX);
+        cropBox.y = Math.min(cropStartY, curY);
+        cropBox.w = Math.abs(curX - cropStartX);
+        cropBox.h = Math.abs(curY - cropStartY);
+
+        renderSingleCropCanvas();
+    });
+
+    window.addEventListener('mouseup', () => { isCropping = false; });
+
+    // TAB 1 변환 및 저축 로직
+    singleCropBtn.addEventListener('click', async () => {
+        if (!singleImgData || !window.showDirectoryPicker) {
+            alert('사진이 지정되지 않았거나 크롬/엣지 브라우저가 아닙니다.');
             return;
         }
 
-        const totalBorderSpace = borderW * (count - 1);
-        const slotWidth = (cWidth - totalBorderSpace) / count;
+        let baseDirHandle;
+        try { baseDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
 
-        collageImages.forEach((item, i) => {
-            const slotX = i * (slotWidth + borderW);
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(slotX, 0, slotWidth, cHeight);
-            ctx.clip();
+        const dateFolderName = getTodayDateString();
+        let dateDirHandle = await baseDirHandle.getDirectoryHandle(dateFolderName, { create: true });
 
-            const img = item.imgObj;
-            const baseScale = Math.max(slotWidth / img.width, cHeight / img.height);
-            const scale = baseScale * item.zoom;
-            const drawW = img.width * scale;
-            const drawH = img.height * scale;
+        statusList.style.display = 'block';
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dateFolderName}] 폴더 저장 중...</div>`;
 
-            const finalX = slotX + (slotWidth - drawW) / 2 + item.offsetX;
-            const finalY = (cHeight - drawH) / 2 + item.offsetY;
+        const file = singleImgData.file;
+        const img = singleImgData.imgObj;
 
-            ctx.drawImage(img, finalX, finalY, drawW, drawH);
-            ctx.restore();
+        // 1. 크롭된 사진 생성 (원본 비율 유지, 해상도 손실 없음)
+        const scaleX = img.width / cropCanvas.width;
+        const scaleY = img.height / cropCanvas.height;
 
-            if (i < count - 1 && borderW > 0) {
-                ctx.fillStyle = borderColor;
-                ctx.fillRect(slotX + slotWidth, 0, borderW, cHeight);
-            }
+        const cropRealX = cropBox.x * scaleX;
+        const cropRealY = cropBox.y * scaleY;
+        const cropRealW = cropBox.w * scaleX;
+        const cropRealH = cropBox.h * scaleY;
+
+        const croppedBlob = await createCroppedBlob(img, cropRealX, cropRealY, cropRealW, cropRealH, file.type);
+        const croppedName = formatFileName(file.name, '_cropped');
+        await saveFileToDir(dateDirHandle, croppedName, croppedBlob);
+
+        // 2. 큰 사진(원본 전체) -> 1000px 리사이즈
+        const resizedMain = await processResizeAutoHeight(file, img, 1000, 0.9);
+        await saveFileToDir(dateDirHandle, resizedMain.name, resizedMain.blob);
+
+        statusList.innerHTML += `<div class="status-item"><span>✂️ ${croppedName}</span><span style="color:#2b8a3e; font-weight:bold;">자르기 완료</span></div>`;
+        statusList.innerHTML += `<div class="status-item"><span>🖼️ ${resizedMain.name}</span><span style="color:#2b8a3e; font-weight:bold;">1000px 리사이즈 완료</span></div>`;
+        
+        alert('저장이 완료되었습니다!');
+    });
+
+    function createCroppedBlob(img, x, y, w, h, type) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = w;
+            canvas.height = h;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+            canvas.toBlob((blob) => resolve(blob), getOutputType(type), 0.92);
         });
     }
 
-    function getSlotIndexAt(x) {
-        const borderW = parseInt(document.getElementById('c-border-w').value) || 0;
-        const count = collageImages.length;
-        if (count === 0) return -1;
-        const rect = canvas.getBoundingClientRect();
-        const canvasX = x * (canvas.width / rect.width);
-        const slotWidth = (canvas.width - (borderW * (count - 1))) / count;
 
-        for (let i = 0; i < count; i++) {
-            const slotX = i * (slotWidth + borderW);
-            if (canvasX >= slotX && canvasX <= slotX + slotWidth) return i;
-        }
-        return -1;
-    }
-
-    canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        activeDragIndex = getSlotIndexAt(e.clientX - rect.left);
-        if (activeDragIndex !== -1) {
-            startX = e.clientX; startY = e.clientY;
-            initialOffsetX = collageImages[activeDragIndex].offsetX;
-            initialOffsetY = collageImages[activeDragIndex].offsetY;
-            canvas.style.cursor = 'grabbing';
-        }
-    });
-
-    window.addEventListener('mousemove', (e) => {
-        if (activeDragIndex === -1) return;
-        const rect = canvas.getBoundingClientRect();
-        const dx = (e.clientX - startX) * (canvas.width / rect.width);
-        const dy = (e.clientY - startY) * (canvas.height / rect.height);
-        collageImages[activeDragIndex].offsetX = initialOffsetX + dx;
-        collageImages[activeDragIndex].offsetY = initialOffsetY + dy;
-        renderCollageCanvas();
-    });
-
-    window.addEventListener('mouseup', () => { activeDragIndex = -1; canvas.style.cursor = 'default'; });
-
-    canvas.addEventListener('wheel', (e) => {
-        if (e.ctrlKey) {
-            e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            const idx = getSlotIndexAt(e.clientX - rect.left);
-            if (idx !== -1) {
-                const zoomFactor = e.deltaY < 0 ? 1.05 : 0.95;
-                collageImages[idx].zoom = Math.max(0.2, Math.min(collageImages[idx].zoom * zoomFactor, 5.0));
-                updateCollageUI();
-                renderCollageCanvas();
-            }
-        }
-    }, { passive: false });
-
-    collageDownloadBtn.addEventListener('click', () => {
-        const mimeType = document.getElementById('c-save-format').value;
-        const ext = mimeType === 'image/png' ? 'png' : (mimeType === 'image/webp' ? 'webp' : 'jpg');
-        const link = document.createElement('a');
-        link.download = `kinocine_collage_${Date.now()}.${ext}`;
-        link.href = canvas.toDataURL(mimeType, 0.92);
-        link.click();
-    });
-
-    // ================= 스마트 리사이저 & 크롭 로직 =================
+    // ================= [TAB 2] 스마트 리사이저 & 크롭 로직 =================
     function openCropEditor() {
         const data = loadedResizerImages[currentEditIndex];
         document.getElementById('edit-progress').textContent = `${currentEditIndex + 1} / ${loadedResizerImages.length}`;
@@ -600,7 +620,7 @@
             openCropEditor();
         } else {
             document.getElementById('editor-modal').style.display = 'none';
-            dropzone.querySelector('p').innerHTML = `🔥 <strong>${loadedResizerImages.length}개</strong> 파일 크롭 영역 설정 완료`;
+            dropzoneText.innerHTML = `🔥 <strong>${loadedResizerImages.length}개</strong> 파일 크롭 영역 설정 완료`;
             resizerBtn.disabled = false;
         }
     };
@@ -662,15 +682,14 @@
 
     resizerBtn.addEventListener('click', async () => {
         if (!window.showDirectoryPicker) {
-            alert('현재 브라우저가 File System Access API를 지원하지 않습니다. Chrome/Edge를 사용해주세요.');
+            alert('현재 브라우저가 File System Access API를 지원하지 않습니다.');
             return;
         }
 
         let baseDirHandle;
         try { baseDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
 
-        const today = new Date();
-        const dateFolderName = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const dateFolderName = getTodayDateString();
         let dateDirHandle = await baseDirHandle.getDirectoryHandle(dateFolderName, { create: true });
 
         const targetWidth = parseInt(document.getElementById('r-target-width').value) || 1000;
@@ -682,13 +701,12 @@
 
         for (const data of loadedResizerImages) {
             try {
-                // 1. 기본 가로 리사이즈
                 const mainImg = await processResizeAutoHeight(data.file, data.img, targetWidth, quality);
                 await saveFileToDir(dateDirHandle, mainImg.name, mainImg.blob);
-                // 2. 크롭 720x420
+
                 const thumb720 = await processCustomCrop(data.file, data.img, 720, 420, data.crop720, quality, '_720x420');
                 await saveFileToDir(dateDirHandle, thumb720.name, thumb720.blob);
-                // 3. 크롭 500x500
+
                 const thumb500 = await processCustomCrop(data.file, data.img, 500, 500, data.crop500, quality, '_500x500');
                 await saveFileToDir(dateDirHandle, thumb500.name, thumb500.blob);
 
@@ -700,8 +718,171 @@
         }
 
         resizerBtn.disabled = false;
-        dropzone.querySelector('p').innerHTML = `📸 이미지 파일들을 클릭하여 선택하거나 여기에 드래그앤드롭 하세요`;
+        dropzoneText.innerHTML = `📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요`;
     });
+
+
+    // ================= [TAB 3] 분할 콜라주 로직 =================
+    ['c-width', 'c-height', 'c-border-w', 'c-border-color'].forEach(id => {
+        document.getElementById(id).addEventListener('input', renderCollageCanvas);
+    });
+
+    function updateCollageUI() {
+        collageItemList.innerHTML = '';
+        collageImages.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.draggable = true;
+            card.innerHTML = `
+                <span style="color:#adb5bd; cursor:grab;">☰</span>
+                <img src="${item.imgObj.src}" class="item-thumb">
+                <div class="item-info">
+                    <div class="item-name">${index + 1}번: ${item.file.name}</div>
+                    <div style="font-size:11px; color:#868e96;">배율: ${(item.zoom * 100).toFixed(0)}%</div>
+                </div>
+                <button class="btn-small btn-danger" onclick="removeCollageItem(${index})">삭제</button>
+            `;
+
+            card.addEventListener('dragstart', () => { draggedCardIndex = index; card.classList.add('dragging'); });
+            card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedCardIndex = null; });
+            card.addEventListener('dragover', (e) => e.preventDefault());
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedCardIndex !== null && draggedCardIndex !== index) {
+                    const movedItem = collageImages.splice(draggedCardIndex, 1)[0];
+                    collageImages.splice(index, 0, movedItem);
+                    updateCollageUI();
+                    renderCollageCanvas();
+                }
+            });
+            collageItemList.appendChild(card);
+        });
+        collageDownloadBtn.disabled = collageImages.length === 0;
+    }
+
+    window.removeCollageItem = function(index) {
+        collageImages.splice(index, 1);
+        updateCollageUI();
+        renderCollageCanvas();
+    };
+
+    function renderCollageCanvas() {
+        const cWidth = parseInt(document.getElementById('c-width').value) || 1000;
+        const cHeight = parseInt(document.getElementById('c-height').value) || 588;
+        const borderW = parseInt(document.getElementById('c-border-w').value) || 0;
+        const borderColor = document.getElementById('c-border-color').value;
+
+        collageCanvas.width = cWidth;
+        collageCanvas.height = cHeight;
+        collageCtx.clearRect(0, 0, cWidth, cHeight);
+
+        const count = collageImages.length;
+        if (count === 0) {
+            collageCtx.fillStyle = '#222';
+            collageCtx.fillRect(0, 0, cWidth, cHeight);
+            collageCtx.fillStyle = '#888';
+            collageCtx.font = '16px sans-serif';
+            collageCtx.textAlign = 'center';
+            collageCtx.fillText('이미지를 업로드하세요', cWidth / 2, cHeight / 2);
+            return;
+        }
+
+        const totalBorderSpace = borderW * (count - 1);
+        const slotWidth = (cWidth - totalBorderSpace) / count;
+
+        collageImages.forEach((item, i) => {
+            const slotX = i * (slotWidth + borderW);
+            collageCtx.save();
+            collageCtx.beginPath();
+            collageCtx.rect(slotX, 0, slotWidth, cHeight);
+            collageCtx.clip();
+
+            const img = item.imgObj;
+            const baseScale = Math.max(slotWidth / img.width, cHeight / img.height);
+            const scale = baseScale * item.zoom;
+            const drawW = img.width * scale;
+            const drawH = img.height * scale;
+
+            const finalX = slotX + (slotWidth - drawW) / 2 + item.offsetX;
+            const finalY = (cHeight - drawH) / 2 + item.offsetY;
+
+            collageCtx.drawImage(img, finalX, finalY, drawW, drawH);
+            collageCtx.restore();
+
+            if (i < count - 1 && borderW > 0) {
+                collageCtx.fillStyle = borderColor;
+                collageCtx.fillRect(slotX + slotWidth, 0, borderW, cHeight);
+            }
+        });
+    }
+
+    function getSlotIndexAt(x) {
+        const borderW = parseInt(document.getElementById('c-border-w').value) || 0;
+        const count = collageImages.length;
+        if (count === 0) return -1;
+        const rect = collageCanvas.getBoundingClientRect();
+        const canvasX = x * (collageCanvas.width / rect.width);
+        const slotWidth = (collageCanvas.width - (borderW * (count - 1))) / count;
+
+        for (let i = 0; i < count; i++) {
+            const slotX = i * (slotWidth + borderW);
+            if (canvasX >= slotX && canvasX <= slotX + slotWidth) return i;
+        }
+        return -1;
+    }
+
+    collageCanvas.addEventListener('mousedown', (e) => {
+        const rect = collageCanvas.getBoundingClientRect();
+        activeDragIndex = getSlotIndexAt(e.clientX - rect.left);
+        if (activeDragIndex !== -1) {
+            startX = e.clientX; startY = e.clientY;
+            initialOffsetX = collageImages[activeDragIndex].offsetX;
+            initialOffsetY = collageImages[activeDragIndex].offsetY;
+            collageCanvas.style.cursor = 'grabbing';
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (activeDragIndex === -1) return;
+        const rect = collageCanvas.getBoundingClientRect();
+        const dx = (e.clientX - startX) * (collageCanvas.width / rect.width);
+        const dy = (e.clientY - startY) * (collageCanvas.height / rect.height);
+        collageImages[activeDragIndex].offsetX = initialOffsetX + dx;
+        collageImages[activeDragIndex].offsetY = initialOffsetY + dy;
+        renderCollageCanvas();
+    });
+
+    window.addEventListener('mouseup', () => { activeDragIndex = -1; collageCanvas.style.cursor = 'default'; });
+
+    collageCanvas.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            const rect = collageCanvas.getBoundingClientRect();
+            const idx = getSlotIndexAt(e.clientX - rect.left);
+            if (idx !== -1) {
+                const zoomFactor = e.deltaY < 0 ? 1.05 : 0.95;
+                collageImages[idx].zoom = Math.max(0.2, Math.min(collageImages[idx].zoom * zoomFactor, 5.0));
+                updateCollageUI();
+                renderCollageCanvas();
+            }
+        }
+    }, { passive: false });
+
+    collageDownloadBtn.addEventListener('click', () => {
+        const mimeType = document.getElementById('c-save-format').value;
+        const ext = mimeType === 'image/png' ? 'png' : (mimeType === 'image/webp' ? 'webp' : 'jpg');
+        const link = document.createElement('a');
+        link.download = `kinocine_collage_${Date.now()}.${ext}`;
+        link.href = collageCanvas.toDataURL(mimeType, 0.92);
+        link.click();
+    });
+
+
+    // ================= 유틸리티 공통 함수 =================
+    function getTodayDateString() {
+        const today = new Date();
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
 
     async function saveFileToDir(dirHandle, filename, blob) {
         const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
