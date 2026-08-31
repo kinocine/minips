@@ -228,7 +228,7 @@
         <input type="file" id="file-input" multiple accept="image/*,.heic,.heif,.webp,.avif" style="display: none;">
     </div>
 
-    <!-- TAB 1: 단일 자유 크롭 & 원본 1000px 리사이즈 [NEW] -->
+    <!-- TAB 1: 단일 자유 크롭 & 원본 1000px 리사이즈 -->
     <div id="tab-single-crop" class="tab-content active">
         <div class="tip-box">
             💡 <strong>사용 방법:</strong> 화면에서 마우스로 드래그하여 필요한 부분만 지정하세요. 지정한 <strong>크롭 사진(원본 크기)</strong>과 <strong>전체 원본 사진(가로 1000px 리사이즈)</strong> 2장이 날짜 폴더에 자동 저장됩니다.
@@ -346,7 +346,7 @@
     const cropCanvas = document.getElementById('crop-canvas');
     const cropCtx = cropCanvas.getContext('2d');
     const singleCropBtn = document.getElementById('single-crop-process-btn');
-    let singleImgData = null; // { file, imgObj }
+    let singleImgData = null;
     let cropBox = { x: 50, y: 50, w: 200, h: 200 };
     let isCropping = false, cropStartX = 0, cropStartY = 0;
 
@@ -401,7 +401,6 @@
         if (validFiles.length === 0) return;
 
         if (activeTab === 'single-crop') {
-            // TAB 1: 첫 번째 사진 1장만 등록 처리
             try {
                 const imgObj = await loadImage(validFiles[0]);
                 singleImgData = { file: validFiles[0], imgObj };
@@ -410,7 +409,6 @@
             } catch (err) { console.error(err); }
 
         } else if (activeTab === 'resizer') {
-            // TAB 2: 스마트 리사이저
             loadedResizerImages = [];
             dropzoneText.innerHTML = `⏳ 이미지 로딩 중...`;
             resizerBtn.disabled = true;
@@ -428,7 +426,6 @@
             }
 
         } else {
-            // TAB 3: 콜라주
             for (const file of validFiles) {
                 try {
                     const imgObj = await loadImage(file);
@@ -466,14 +463,12 @@
         if (!singleImgData) return;
         const img = singleImgData.imgObj;
         
-        // 캔버스 크기를 컨테이너 폭에 맞춤 (최대 850px)
         const displayW = Math.min(850, img.width);
         const displayH = img.height * (displayW / img.width);
 
         cropCanvas.width = displayW;
         cropCanvas.height = displayH;
 
-        // 초기 크롭 박스 (중앙 50% 크기)
         cropBox = {
             x: displayW * 0.25,
             y: displayH * 0.25,
@@ -491,11 +486,9 @@
         cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
         cropCtx.drawImage(img, 0, 0, cropCanvas.width, cropCanvas.height);
 
-        // 어두운 반투명 오버레이
         cropCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
 
-        // 크롭 박스 영역 밝게 표시
         cropCtx.drawImage(
             img,
             (cropBox.x / cropCanvas.width) * img.width,
@@ -505,13 +498,11 @@
             cropBox.x, cropBox.y, cropBox.w, cropBox.h
         );
 
-        // 크롭 테두리 선
         cropCtx.strokeStyle = '#e50914';
         cropCtx.lineWidth = 2;
         cropCtx.strokeRect(cropBox.x, cropBox.y, cropBox.w, cropBox.h);
     }
 
-    // 마우스 드래그로 자유 크롭 상자 그리기
     cropCanvas.addEventListener('mousedown', (e) => {
         const rect = cropCanvas.getBoundingClientRect();
         cropStartX = e.clientX - rect.left;
@@ -536,7 +527,6 @@
 
     window.addEventListener('mouseup', () => { isCropping = false; });
 
-    // TAB 1 변환 및 저축 로직
     singleCropBtn.addEventListener('click', async () => {
         if (!singleImgData || !window.showDirectoryPicker) {
             alert('사진이 지정되지 않았거나 크롬/엣지 브라우저가 아닙니다.');
@@ -555,7 +545,6 @@
         const file = singleImgData.file;
         const img = singleImgData.imgObj;
 
-        // 1. 크롭된 사진 생성 (원본 비율 유지, 해상도 손실 없음)
         const scaleX = img.width / cropCanvas.width;
         const scaleY = img.height / cropCanvas.height;
 
@@ -568,7 +557,6 @@
         const croppedName = formatFileName(file.name, '_cropped');
         await saveFileToDir(dateDirHandle, croppedName, croppedBlob);
 
-        // 2. 큰 사진(원본 전체) -> 1000px 리사이즈
         const resizedMain = await processResizeAutoHeight(file, img, 1000, 0.9);
         await saveFileToDir(dateDirHandle, resizedMain.name, resizedMain.blob);
 
@@ -591,7 +579,7 @@
     }
 
 
-    // ================= [TAB 2] 스마트 리사이저 & 크롭 로직 =================
+    // ================= [TAB 2] 스마트 리사이저 & 크롭 로직 (수정됨) =================
     function openCropEditor() {
         const data = loadedResizerImages[currentEditIndex];
         document.getElementById('edit-progress').textContent = `${currentEditIndex + 1} / ${loadedResizerImages.length}`;
@@ -625,6 +613,7 @@
         }
     };
 
+    // 상하/좌우 이동 및 독립 이벤트 할당이 개선된 드래그 함수
     function setupDraggableCrop(imgObj, targetW, targetH, containerId, imgId) {
         const container = document.getElementById(containerId);
         const imgEl = document.getElementById(imgId);
@@ -632,25 +621,37 @@
 
         const containerWidth = container.clientWidth || targetW;
         const uiScale = containerWidth / targetW;
-        const uiW = targetW * uiScale, uiH = targetH * uiScale;
-        const scale = Math.max(targetW / imgObj.width, targetH / imgObj.height);
-        const scaledImgW = imgObj.width * scale * uiScale;
-        const scaledImgH = imgObj.height * scale * uiScale;
+        const uiW = targetW * uiScale;
+        const uiH = targetH * uiScale;
+
+        // 구도 설정을 위해 최소 15% 여유를 두는 확대 비율 계산
+        const baseScale = Math.max(targetW / imgObj.width, targetH / imgObj.height);
+        const fitScale = Math.max(baseScale, (targetW * 1.15) / imgObj.width, (targetH * 1.15) / imgObj.height);
+
+        const scaledImgW = imgObj.width * fitScale * uiScale;
+        const scaledImgH = imgObj.height * fitScale * uiScale;
 
         imgEl.style.width = scaledImgW + 'px';
         imgEl.style.height = scaledImgH + 'px';
 
-        let currentX = (uiW - scaledImgW) / 2, currentY = (uiH - scaledImgH) / 2;
-        const minX = uiW - scaledImgW, minY = uiH - scaledImgH;
+        let currentX = (uiW - scaledImgW) / 2;
+        let currentY = (uiH - scaledImgH) / 2;
+        const minX = uiW - scaledImgW;
+        const minY = uiH - scaledImgH;
 
         function updatePos() {
-            if (currentX > 0) currentX = 0; if (currentY > 0) currentY = 0;
-            if (currentX < minX) currentX = minX; if (currentY < minY) currentY = minY;
-            imgEl.style.left = currentX + 'px'; imgEl.style.top = currentY + 'px';
+            if (currentX > 0) currentX = 0;
+            if (currentY > 0) currentY = 0;
+            if (currentX < minX) currentX = minX;
+            if (currentY < minY) currentY = minY;
+
+            imgEl.style.left = currentX + 'px';
+            imgEl.style.top = currentY + 'px';
         }
         updatePos();
 
         let isDragging = false, startX, startY, initialX, initialY;
+
         const onMove = (e) => {
             if (!isDragging) return;
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
@@ -660,23 +661,38 @@
             updatePos();
             if (e.cancelable) e.preventDefault();
         };
-        const onUp = () => { isDragging = false; };
+
+        const onUp = () => {
+            if (isDragging) {
+                isDragging = false;
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('mouseup', onUp);
+                window.removeEventListener('touchend', onUp);
+            }
+        };
+
         const onDown = (e) => {
             isDragging = true;
             startX = e.touches ? e.touches[0].clientX : e.clientX;
             startY = e.touches ? e.touches[0].clientY : e.clientY;
-            initialX = currentX; initialY = currentY;
+            initialX = currentX;
+            initialY = currentY;
+
+            window.addEventListener('mousemove', onMove, { passive: false });
+            window.addEventListener('touchmove', onMove, { passive: false });
+            window.addEventListener('mouseup', onUp);
+            window.addEventListener('touchend', onUp);
         };
 
-        container.onmousedown = onDown; container.ontouchstart = onDown;
-        window.onmousemove = onMove; window.ontouchmove = onMove;
-        window.onmouseup = onUp; window.ontouchend = onUp;
+        container.onmousedown = onDown;
+        container.ontouchstart = onDown;
 
         return () => ({
-            sourceX: Math.abs(currentX / uiScale / scale),
-            sourceY: Math.abs(currentY / uiScale / scale),
-            sourceW: targetW / scale,
-            sourceH: targetH / scale
+            sourceX: Math.abs(currentX / uiScale / fitScale),
+            sourceY: Math.abs(currentY / uiScale / fitScale),
+            sourceW: targetW / fitScale,
+            sourceH: targetH / fitScale
         });
     }
 
