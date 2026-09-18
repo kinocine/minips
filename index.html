@@ -215,7 +215,7 @@
 <div class="container">
     <h1>Kinocine Mini Photoshop v2</h1>
 
-    <!-- 탭 메뉴 (순서 변경: 1. 크롭 / 2. 스마트리사이즈 / 3. 콜라주) -->
+    <!-- 탭 메뉴 -->
     <div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('single-crop')">✂️ 자유 크롭 & 원본1000w</button>
         <button class="tab-btn" onclick="switchTab('resizer')">⚡ 스마트 리사이즈 & 멀티크롭</button>
@@ -231,14 +231,14 @@
     <!-- TAB 1: 단일 자유 크롭 & 원본 1000px 리사이즈 -->
     <div id="tab-single-crop" class="tab-content active">
         <div class="tip-box">
-            💡 <strong>사용 방법:</strong> 화면에서 마우스로 드래그하여 필요한 부분만 지정하세요. 지정한 <strong>크롭 사진(원본 크기)</strong>과 <strong>전체 원본 사진(가로 1000px 리사이즈)</strong> 2장이 날짜 폴더에 자동 저장됩니다.
+            💡 <strong>사용 방법:</strong> 화면에서 마우스로 드래그하여 필요한 부분만 지정하세요. 지정한 <strong>크롭 사진(원본 크기 JPG)</strong>과 <strong>전체 원본 사진(가로 1000px 리사이즈 JPG)</strong> 2장이 날짜 폴더에 자동 저장됩니다.
         </div>
 
         <div class="canvas-container">
             <canvas id="crop-canvas"></canvas>
         </div>
 
-        <button id="single-crop-process-btn" class="btn" disabled>지정 영역 크롭 + 원본 1000px 저장 시작</button>
+        <button id="single-crop-process-btn" class="btn" disabled>지정 영역 크롭 + 원본 1000px 저장 시작 (JPG 저장)</button>
     </div>
 
     <!-- TAB 2: 스마트 리사이즈 & 멀티 크롭 -->
@@ -287,7 +287,7 @@
             <div class="control-group">
                 <label>저장 포맷</label>
                 <select id="c-save-format">
-                    <option value="image/jpeg">JPG</option>
+                    <option value="image/jpeg" selected>JPG</option>
                     <option value="image/png">PNG</option>
                     <option value="image/webp">WebP</option>
                 </select>
@@ -560,8 +560,8 @@
         const resizedMain = await processResizeAutoHeight(file, img, 1000, 0.9);
         await saveFileToDir(dateDirHandle, resizedMain.name, resizedMain.blob);
 
-        statusList.innerHTML += `<div class="status-item"><span>✂️ ${croppedName}</span><span style="color:#2b8a3e; font-weight:bold;">자르기 완료</span></div>`;
-        statusList.innerHTML += `<div class="status-item"><span>🖼️ ${resizedMain.name}</span><span style="color:#2b8a3e; font-weight:bold;">1000px 리사이즈 완료</span></div>`;
+        statusList.innerHTML += `<div class="status-item"><span>✂️ ${croppedName}</span><span style="color:#2b8a3e; font-weight:bold;">JPG 자르기 완료</span></div>`;
+        statusList.innerHTML += `<div class="status-item"><span>🖼️ ${resizedMain.name}</span><span style="color:#2b8a3e; font-weight:bold;">1000px JPG 리사이즈 완료</span></div>`;
         
         alert('저장이 완료되었습니다!');
     });
@@ -578,8 +578,7 @@
         });
     }
 
-
-    // ================= [TAB 2] 스마트 리사이저 & 크롭 로직 (수정됨) =================
+    // ================= [TAB 2] 스마트 리사이저 & 크롭 로직 =================
     function openCropEditor() {
         const data = loadedResizerImages[currentEditIndex];
         document.getElementById('edit-progress').textContent = `${currentEditIndex + 1} / ${loadedResizerImages.length}`;
@@ -613,7 +612,6 @@
         }
     };
 
-    // 상하/좌우 이동 및 독립 이벤트 할당이 개선된 드래그 함수
     function setupDraggableCrop(imgObj, targetW, targetH, containerId, imgId) {
         const container = document.getElementById(containerId);
         const imgEl = document.getElementById(imgId);
@@ -624,7 +622,6 @@
         const uiW = targetW * uiScale;
         const uiH = targetH * uiScale;
 
-        // 구도 설정을 위해 최소 15% 여유를 두는 확대 비율 계산
         const baseScale = Math.max(targetW / imgObj.width, targetH / imgObj.height);
         const fitScale = Math.max(baseScale, (targetW * 1.15) / imgObj.width, (targetH * 1.15) / imgObj.height);
 
@@ -728,7 +725,7 @@
 
                 const item = document.createElement('div');
                 item.className = 'status-item';
-                item.innerHTML = `<span>💾 ${data.file.name}</span><span style="color:#2b8a3e; font-weight:bold;">3종 저장 완료</span>`;
+                item.innerHTML = `<span>💾 ${data.file.name}</span><span style="color:#2b8a3e; font-weight:bold;">JPG 3종 저장 완료</span>`;
                 statusList.appendChild(item);
             } catch (err) { console.error(err); }
         }
@@ -736,7 +733,6 @@
         resizerBtn.disabled = false;
         dropzoneText.innerHTML = `📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요`;
     });
-
 
     // ================= [TAB 3] 분할 콜라주 로직 =================
     ['c-width', 'c-height', 'c-border-w', 'c-border-color'].forEach(id => {
@@ -893,7 +889,6 @@
         link.click();
     });
 
-
     // ================= 유틸리티 공통 함수 =================
     function getTodayDateString() {
         const today = new Date();
@@ -933,15 +928,21 @@
         });
     }
 
+    // 파일명 포맷: AVIF, HEIC, HEIF, WEBP 확장자를 모두 .jpg로 치환
     function formatFileName(originalName, suffix) {
-        let name = originalName.replace(/\.(heic|heif)$/i, '.jpg');
+        let name = originalName.replace(/\.(avif|heic|heif|webp)$/i, '.jpg');
         const lastDot = name.lastIndexOf('.');
         if (lastDot === -1) return `${name}${suffix}.jpg`;
-        return `${name.substring(0, lastDot)}${suffix}${name.substring(lastDot)}`;
+        const base = name.substring(0, lastDot);
+        return `${base}${suffix}.jpg`;
     }
 
+    // 출력 MIME 타입: AVIF, HEIC, HEIF 입력 시 강제로 image/jpeg 반환
     function getOutputType(type) {
-        return (!type || type === 'image/heic' || type === 'image/heif') ? 'image/jpeg' : type;
+        if (!type || type === 'image/heic' || type === 'image/heif' || type === 'image/avif') {
+            return 'image/jpeg';
+        }
+        return type;
     }
 </script>
 
