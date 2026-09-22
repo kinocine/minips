@@ -231,7 +231,7 @@
     <!-- TAB 1: 단일 자유 크롭 & 원본 1000px 리사이즈 -->
     <div id="tab-single-crop" class="tab-content active">
         <div class="tip-box">
-            💡 <strong>사용 방법:</strong> 화면에서 마우스로 드래그하여 필요한 부분만 지정하세요. 지정한 <strong>크롭 사진(원본 크기 JPG)</strong>과 <strong>전체 원본 사진(가로 1000px 리사이즈 JPG)</strong> 2장이 날짜 폴더에 자동 저장됩니다.
+            💡 <strong>사용 방법:</strong> 화면에서 마우스로 드래그하여 필요한 부분만 지정하세요. 지정한 <strong>크롭 사진(JPG)</strong>과 <strong>전체 원본 사진(가로 1000px 리사이즈 JPG)</strong> 2장이 날짜 폴더에 자동 저장됩니다.
         </div>
 
         <div class="canvas-container">
@@ -553,8 +553,8 @@
         const cropRealW = cropBox.w * scaleX;
         const cropRealH = cropBox.h * scaleY;
 
-        const croppedBlob = await createCroppedBlob(img, cropRealX, cropRealY, cropRealW, cropRealH, file.type);
-        const croppedName = formatFileName(file.name, '_cropped');
+        const croppedBlob = await createCroppedBlob(img, cropRealX, cropRealY, cropRealW, cropRealH);
+        const croppedName = formatFileName(file.name, 'cropped_');
         await saveFileToDir(dateDirHandle, croppedName, croppedBlob);
 
         const resizedMain = await processResizeAutoHeight(file, img, 1000, 0.9);
@@ -566,7 +566,7 @@
         alert('저장이 완료되었습니다!');
     });
 
-    function createCroppedBlob(img, x, y, w, h, type) {
+    function createCroppedBlob(img, x, y, w, h) {
         return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -574,7 +574,7 @@
             canvas.height = h;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
-            canvas.toBlob((blob) => resolve(blob), getOutputType(type), 0.92);
+            canvas.toBlob((blob) => resolve(blob), getOutputType(), 0.92);
         });
     }
 
@@ -714,13 +714,16 @@
 
         for (const data of loadedResizerImages) {
             try {
+                // 1000w_파일명.jpg
                 const mainImg = await processResizeAutoHeight(data.file, data.img, targetWidth, quality);
                 await saveFileToDir(dateDirHandle, mainImg.name, mainImg.blob);
 
-                const thumb720 = await processCustomCrop(data.file, data.img, 720, 420, data.crop720, quality, '_720x420');
+                // 720x420_파일명.jpg
+                const thumb720 = await processCustomCrop(data.file, data.img, 720, 420, data.crop720, quality, '720x420_');
                 await saveFileToDir(dateDirHandle, thumb720.name, thumb720.blob);
 
-                const thumb500 = await processCustomCrop(data.file, data.img, 500, 500, data.crop500, quality, '_500x500');
+                // 500x500_파일명.jpg
+                const thumb500 = await processCustomCrop(data.file, data.img, 500, 500, data.crop500, quality, '500x500_');
                 await saveFileToDir(dateDirHandle, thumb500.name, thumb500.blob);
 
                 const item = document.createElement('div');
@@ -911,38 +914,35 @@
             canvas.width = w; canvas.height = h;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, w, h);
-            const outName = formatFileName(file.name, `_${targetWidth}w`);
-            canvas.toBlob((blob) => resolve({ name: outName, blob }), getOutputType(file.type), quality);
+            // Saan a suffix no di ket prefix iti sango
+            const outName = formatFileName(file.name, `${targetWidth}w_`);
+            canvas.toBlob((blob) => resolve({ name: outName, blob }), getOutputType(), quality);
         });
     }
 
-    function processCustomCrop(file, img, targetW, targetH, cropData, quality, suffix) {
+    function processCustomCrop(file, img, targetW, targetH, cropData, quality, prefix) {
         return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = targetW; canvas.height = targetH;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, cropData.sourceX, cropData.sourceY, cropData.sourceW, cropData.sourceH, 0, 0, targetW, targetH);
-            const outName = formatFileName(file.name, suffix);
-            canvas.toBlob((blob) => resolve({ name: outName, blob }), getOutputType(file.type), quality);
+            // Ipataray ti prefix iti sango
+            const outName = formatFileName(file.name, prefix);
+            canvas.toBlob((blob) => resolve({ name: outName, blob }), getOutputType(), quality);
         });
     }
 
-    // 파일명 포맷: AVIF, HEIC, HEIF, WEBP 확장자를 모두 .jpg로 치환
-    function formatFileName(originalName, suffix) {
-        let name = originalName.replace(/\.(avif|heic|heif|webp)$/i, '.jpg');
-        const lastDot = name.lastIndexOf('.');
-        if (lastDot === -1) return `${name}${suffix}.jpg`;
-        const base = name.substring(0, lastDot);
-        return `${base}${suffix}.jpg`;
+    // Nagan ti file: Ikabil ti prefix iti sango ken pagbalinen a puro a .jpg ti extension
+    function formatFileName(originalName, prefix) {
+        const lastDot = originalName.lastIndexOf('.');
+        const base = lastDot === -1 ? originalName : originalName.substring(0, lastDot);
+        return `${prefix}${base}.jpg`;
     }
 
-    // 출력 MIME 타입: AVIF, HEIC, HEIF 입력 시 강제로 image/jpeg 반환
-    function getOutputType(type) {
-        if (!type || type === 'image/heic' || type === 'image/heif' || type === 'image/avif') {
-            return 'image/jpeg';
-        }
-        return type;
+    // Siguradoen a puro a JPG (image/jpeg) ti maiproseso aniaman ti orihinal a pormat
+    function getOutputType() {
+        return 'image/jpeg';
     }
 </script>
 
