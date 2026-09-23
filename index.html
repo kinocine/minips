@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kinocine Mini Photoshop v2</title>
+    <title>Kinocine Mini Photoshop v3</title>
     <!-- HEIC/HEIF 포맷 지원 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <style>
@@ -25,7 +25,7 @@
             align-items: center;
         }
         .container {
-            max-width: 900px;
+            max-width: 960px;
             width: 100%;
             background: var(--card-bg);
             padding: 25px;
@@ -48,9 +48,11 @@
             gap: 6px;
             margin-bottom: 20px;
             border-bottom: 2px solid var(--border-color);
+            flex-wrap: wrap;
         }
         .tab-btn {
             flex: 1;
+            min-width: 140px;
             padding: 12px 8px;
             background: #f1f3f5;
             border: none;
@@ -70,7 +72,7 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* 공통 드롭존 및 옵션 */
+        /* 공통 드롭존 및 컨트롤러 */
         .dropzone {
             border: 2px dashed var(--primary-color);
             border-radius: 8px;
@@ -134,7 +136,7 @@
         .btn:hover { background-color: #b80710; }
         .btn:disabled { background-color: #dee2e6; color: #868e96; cursor: not-allowed; }
 
-        /* 캔버스 공통 스타일 */
+        /* 캔버스 컨테이너 */
         .canvas-container {
             position: relative;
             max-width: 100%;
@@ -196,6 +198,33 @@
         }
         .status-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f3f5; font-size: 13px; }
 
+        /* 미리보기 그리드 (슬라이드 탭 전용) */
+        .slide-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .slide-preview-card {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px;
+            background: #f8f9fa;
+            text-align: center;
+        }
+        .slide-preview-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            display: block;
+        }
+        .slide-preview-label {
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 6px;
+            color: #495057;
+        }
+
         /* 수동 멀티 크롭 모달 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -213,23 +242,54 @@
 <body>
 
 <div class="container">
-    <h1>Kinocine Mini Photoshop v2</h1>
+    <h1>Kinocine Mini Photoshop v3</h1>
 
     <!-- 탭 메뉴 -->
     <div class="tab-menu">
-        <button class="tab-btn active" onclick="switchTab('single-crop')">✂️ 자유 크롭 & 원본1000w</button>
+        <button class="tab-btn active" onclick="switchTab('slice')">🎞️ 세로 슬라이드 분할</button>
+        <button class="tab-btn" onclick="switchTab('single-crop')">✂️ 자유 크롭 & 원본1000w</button>
         <button class="tab-btn" onclick="switchTab('resizer')">⚡ 스마트 리사이즈 & 멀티크롭</button>
         <button class="tab-btn" onclick="switchTab('collage')">🎬 분할 콜라주 메이커</button>
     </div>
 
-    <!-- 공통 업로드 드롭존 -->
+    <!-- 공통 업로드 드롭존 (WebP, AVIF, HEIC 등 모든 이미지 포맷 대응) -->
     <div class="dropzone" id="dropzone">
-        <p id="dropzone-text">📸 이미지 파일들을 클릭하여 선택하거나 여기에 드래그앤드롭 하세요</p>
+        <p id="dropzone-text">📸 세로로 긴 분할용 이미지 파일을 선택하거나 드래그앤드롭 하세요 (WebP, JPG, PNG, HEIC 등 지원)</p>
         <input type="file" id="file-input" multiple accept="image/*,.heic,.heif,.webp,.avif" style="display: none;">
     </div>
 
+    <!-- TAB 0: 세로 슬라이드 분할 -->
+    <div id="tab-slice" class="tab-content active">
+        <div class="tip-box">
+            💡 <strong>사용 방법:</strong> 보도자료 스틸컷처럼 2개, 3개, 4개 이상 세로로 붙어 있는 이미지를 올리고 등분 수를 선택하세요. 각 조각을 <strong>가로 1000px(고화질 JPG)</strong>로 균등 분할하여 날짜 폴더에 저장합니다.
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>세로 분할 개수 (몇 등분?)</label>
+                <select id="slice-parts-select">
+                    <option value="2">2등분 (상/하 2컷)</option>
+                    <option value="3">3등분 (상/중/하 3컷)</option>
+                    <option value="4" selected>4등분 (보도스틸 표준 4컷)</option>
+                    <option value="5">5등분</option>
+                    <option value="6">6등분</option>
+                    <option value="7">7등분</option>
+                    <option value="8">8등분</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>저장 가로 해상도</label>
+                <input type="text" value="1000 px 고정 (JPG)" disabled>
+            </div>
+        </div>
+
+        <div id="slice-preview-container" class="slide-preview-grid"></div>
+
+        <button id="slice-process-btn" class="btn" disabled>분할 이미지 가로 1000px JPG 일괄 저장 (YYYY-MM-DD 폴더)</button>
+    </div>
+
     <!-- TAB 1: 단일 자유 크롭 & 원본 1000px 리사이즈 -->
-    <div id="tab-single-crop" class="tab-content active">
+    <div id="tab-single-crop" class="tab-content">
         <div class="tip-box">
             💡 <strong>사용 방법:</strong> 화면에서 마우스로 드래그하여 필요한 부분만 지정하세요. 지정한 <strong>크롭 사진(JPG)</strong>과 <strong>전체 원본 사진(가로 1000px 리사이즈 JPG)</strong> 2장이 날짜 폴더에 자동 저장됩니다.
         </div>
@@ -336,11 +396,17 @@
 
 <script>
     // --- 글로벌 상태 및 엘리먼트 ---
-    let activeTab = 'single-crop';
+    let activeTab = 'slice';
     const dropzone = document.getElementById('dropzone');
     const dropzoneText = document.getElementById('dropzone-text');
     const fileInput = document.getElementById('file-input');
     const statusList = document.getElementById('status-list');
+
+    // TAB 0 (슬라이드 분할) 변수
+    const sliceProcessBtn = document.getElementById('slice-process-btn');
+    const slicePartsSelect = document.getElementById('slice-parts-select');
+    const slicePreviewContainer = document.getElementById('slice-preview-container');
+    let sliceLoadedImages = []; // 여러 개의 세로 긴 파일 동시 처리 지원
 
     // TAB 1 (단일 자유 크롭) 변수
     const cropCanvas = document.getElementById('crop-canvas');
@@ -370,16 +436,20 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
-        if (tabName === 'single-crop') {
+        if (tabName === 'slice') {
             document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('tab-slice').classList.add('active');
+            dropzoneText.textContent = "📸 세로로 긴 분할용 이미지(WebP, JPG, PNG, HEIC 등)를 드래그앤드롭 하세요";
+        } else if (tabName === 'single-crop') {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
             document.getElementById('tab-single-crop').classList.add('active');
             dropzoneText.textContent = "📸 자르고 싶은 사진 1장을 클릭하거나 드래그앤드롭 하세요";
         } else if (tabName === 'resizer') {
-            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.querySelectorAll('.tab-btn')[2].classList.add('active');
             document.getElementById('tab-resizer').classList.add('active');
             dropzoneText.textContent = "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
         } else {
-            document.querySelectorAll('.tab-btn')[2].classList.add('active');
+            document.querySelectorAll('.tab-btn')[3].classList.add('active');
             document.getElementById('tab-collage').classList.add('active');
             dropzoneText.textContent = "📸 콜라주 합성할 사진들을 드래그앤드롭 하세요";
         }
@@ -397,10 +467,29 @@
     });
 
     async function handleFiles(files) {
-        const validFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.name.match(/\.(heic|heif|webp|avif)$/i));
+        // webp, avif, heic 등 폭넓은 웹 포맷 검증
+        const validFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.name.match(/\.(heic|heif|webp|avif|jpg|jpeg|png)$/i));
         if (validFiles.length === 0) return;
 
-        if (activeTab === 'single-crop') {
+        if (activeTab === 'slice') {
+            sliceLoadedImages = [];
+            slicePreviewContainer.innerHTML = '⏳ 이미지를 로딩하고 있습니다...';
+            sliceProcessBtn.disabled = true;
+
+            for (const file of validFiles) {
+                try {
+                    const imgObj = await loadImage(file);
+                    sliceLoadedImages.push({ file, imgObj });
+                } catch (err) { console.error("슬라이드 이미지 로드 실패:", err); }
+            }
+
+            if (sliceLoadedImages.length > 0) {
+                renderSlicePreviews();
+                sliceProcessBtn.disabled = false;
+                dropzoneText.innerHTML = `📸 총 <strong>${sliceLoadedImages.length}개</strong>의 분할 대상 이미지가 준비되었습니다.`;
+            }
+
+        } else if (activeTab === 'single-crop') {
             try {
                 const imgObj = await loadImage(validFiles[0]);
                 singleImgData = { file: validFiles[0], imgObj };
@@ -457,6 +546,107 @@
             reader.readAsDataURL(processBlob);
         });
     }
+
+    // ================= [TAB 0] 세로 슬라이드 분할 로직 =================
+    slicePartsSelect.addEventListener('change', () => {
+        if (sliceLoadedImages.length > 0) {
+            renderSlicePreviews();
+        }
+    });
+
+    function renderSlicePreviews() {
+        slicePreviewContainer.innerHTML = '';
+        const parts = parseInt(slicePartsSelect.value);
+
+        sliceLoadedImages.forEach((item, imgIdx) => {
+            const img = item.imgObj;
+            const pieceHeight = img.height / parts;
+
+            for (let i = 0; i < parts; i++) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 1000;
+                canvas.height = pieceHeight * (1000 / img.width);
+
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(
+                    img,
+                    0, i * pieceHeight, img.width, pieceHeight,
+                    0, 0, canvas.width, canvas.height
+                );
+
+                const card = document.createElement('div');
+                card.className = 'slide-preview-card';
+                
+                const previewImg = document.createElement('img');
+                previewImg.src = canvas.toDataURL('image/jpeg', 0.85);
+                
+                const label = document.createElement('div');
+                label.className = 'slide-preview-label';
+                label.textContent = `[${imgIdx + 1}] 조각 ${i + 1}/${parts} (1000w)`;
+
+                card.appendChild(previewImg);
+                card.appendChild(label);
+                slicePreviewContainer.appendChild(card);
+            }
+        });
+    }
+
+    sliceProcessBtn.addEventListener('click', async () => {
+        if (!sliceLoadedImages.length || !window.showDirectoryPicker) {
+            alert('사진이 없거나 지원되지 않는 브라우저입니다. Chrome 또는 Edge를 사용해 주세요.');
+            return;
+        }
+
+        let baseDirHandle;
+        try { baseDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
+
+        const dateFolderName = getTodayDateString();
+        let dateDirHandle = await baseDirHandle.getDirectoryHandle(dateFolderName, { create: true });
+
+        const parts = parseInt(slicePartsSelect.value);
+        sliceProcessBtn.disabled = true;
+        statusList.style.display = 'block';
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dateFolderName}] 슬라이드 분할(가로 1000px 고화질 JPG) 저장 중...</div>`;
+
+        for (const item of sliceLoadedImages) {
+            const img = item.imgObj;
+            const originalName = item.file.name;
+            const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+            const pieceHeight = img.height / parts;
+
+            for (let i = 0; i < parts; i++) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const targetW = 1000;
+                const targetH = pieceHeight * (targetW / img.width);
+
+                canvas.width = targetW;
+                canvas.height = targetH;
+                ctx.imageSmoothingQuality = 'high';
+
+                ctx.drawImage(
+                    img,
+                    0, i * pieceHeight, img.width, pieceHeight,
+                    0, 0, targetW, targetH
+                );
+
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+                const padNum = String(i + 1).padStart(2, '0');
+                const outFileName = `1000w_${baseName}_slide_${padNum}.jpg`;
+
+                await saveFileToDir(dateDirHandle, outFileName, blob);
+
+                const statusItem = document.createElement('div');
+                statusItem.className = 'status-item';
+                statusItem.innerHTML = `<span>🎞️ ${outFileName}</span><span style="color:#2b8a3e; font-weight:bold;">저장 완료</span>`;
+                statusList.appendChild(statusItem);
+            }
+        }
+
+        sliceProcessBtn.disabled = false;
+        alert('모든 슬라이드 분할 이미지가 성공적으로 저장되었습니다!');
+    });
 
     // ================= [TAB 1] 단일 크롭 로직 =================
     function initSingleCropCanvas() {
@@ -914,7 +1104,6 @@
             canvas.width = w; canvas.height = h;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, w, h);
-            // Saan a suffix no di ket prefix iti sango
             const outName = formatFileName(file.name, `${targetWidth}w_`);
             canvas.toBlob((blob) => resolve({ name: outName, blob }), getOutputType(), quality);
         });
@@ -927,20 +1116,17 @@
             canvas.width = targetW; canvas.height = targetH;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, cropData.sourceX, cropData.sourceY, cropData.sourceW, cropData.sourceH, 0, 0, targetW, targetH);
-            // Ipataray ti prefix iti sango
             const outName = formatFileName(file.name, prefix);
             canvas.toBlob((blob) => resolve({ name: outName, blob }), getOutputType(), quality);
         });
     }
 
-    // Nagan ti file: Ikabil ti prefix iti sango ken pagbalinen a puro a .jpg ti extension
     function formatFileName(originalName, prefix) {
         const lastDot = originalName.lastIndexOf('.');
         const base = lastDot === -1 ? originalName : originalName.substring(0, lastDot);
         return `${prefix}${base}.jpg`;
     }
 
-    // Siguradoen a puro a JPG (image/jpeg) ti maiproseso aniaman ti orihinal a pormat
     function getOutputType() {
         return 'image/jpeg';
     }
