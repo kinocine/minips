@@ -537,7 +537,6 @@
                 return null;
             }
         }
-        // 권한 확인 및 재요청
         const perm = await savedDirectoryHandle.queryPermission({ mode: 'readwrite' });
         if (perm !== 'granted') {
             const reqPerm = await savedDirectoryHandle.requestPermission({ mode: 'readwrite' });
@@ -811,7 +810,7 @@
         });
     }
 
-    // ⚡ 리사이즈 & 크롭 저장 (1000_, 720_, 500_ + 타임스탬프)
+    // ⚡ 리사이즈 & 크롭 저장 ({ts}_1000, {ts}_720, {ts}_500)
     resizerBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
         if (!dirHandle) return;
@@ -827,19 +826,19 @@
             try {
                 const ts = getTimeStampString();
 
-                // 1000w 기본
-                const mainImg = await processResizeAutoHeight(data.file, data.img, targetWidth, quality, `${targetWidth}_${ts}.jpg`);
+                // {ts}_1000.jpg 기본
+                const mainImg = await processResizeAutoHeight(data.file, data.img, targetWidth, quality, `${ts}_${targetWidth}.jpg`);
                 await saveFileDirect(dirHandle, mainImg.name, mainImg.blob);
 
-                // 720x420
-                const thumb720 = await processCustomCrop(data.file, data.img, 720, 420, data.crop720, quality, `720_${ts}.jpg`);
+                // {ts}_720.jpg
+                const thumb720 = await processCustomCrop(data.file, data.img, 720, 420, data.crop720, quality, `${ts}_720.jpg`);
                 await saveFileDirect(dirHandle, thumb720.name, thumb720.blob);
 
-                // 500x500
-                const thumb500 = await processCustomCrop(data.file, data.img, 500, 500, data.crop500, quality, `500_${ts}.jpg`);
+                // {ts}_500.jpg
+                const thumb500 = await processCustomCrop(data.file, data.img, 500, 500, data.crop500, quality, `${ts}_500.jpg`);
                 await saveFileDirect(dirHandle, thumb500.name, thumb500.blob);
 
-                appendStatus(`💾 ${data.file.name}`, `${targetWidth}_, 720_, 500_ 저장 완료`);
+                appendStatus(`💾 ${data.file.name}`, `_${targetWidth}, _720, _500 저장 완료`);
                 await new Promise(r => setTimeout(r, 1000)); // 타임스탬프 중복 방지 지연
             } catch (err) { console.error(err); }
         }
@@ -913,7 +912,7 @@
             const img = item.imgObj;
             const ts = getTimeStampString();
 
-            // 통짜 1000w
+            // 통짜 {ts}_1000_full.jpg
             const fullCanvas = document.createElement('canvas');
             const fullCtx = fullCanvas.getContext('2d');
             fullCanvas.width = 1000;
@@ -921,11 +920,11 @@
             fullCtx.imageSmoothingQuality = 'high';
             fullCtx.drawImage(img, 0, 0, fullCanvas.width, fullCanvas.height);
             const fullBlob = await new Promise(res => fullCanvas.toBlob(res, 'image/jpeg', 0.92));
-            const fullFileName = `1000_${ts}_full.jpg`;
+            const fullFileName = `${ts}_1000_full.jpg`;
             await saveFileDirect(dirHandle, fullFileName, fullBlob);
             appendStatus(`🎞️ ${fullFileName}`, '통짜 저장 완료');
 
-            // 분할 조각
+            // 분할 조각 {ts}_1000_part01.jpg
             const pieceHeight = img.height / parts;
             for (let i = 0; i < parts; i++) {
                 const canvas = document.createElement('canvas');
@@ -937,7 +936,7 @@
 
                 const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
                 const padNum = String(i + 1).padStart(2, '0');
-                const outFileName = `1000_${ts}_part${padNum}.jpg`;
+                const outFileName = `${ts}_1000_part${padNum}.jpg`;
 
                 await saveFileDirect(dirHandle, outFileName, blob);
                 appendStatus(`🎞️ ${outFileName}`, '조각 저장 완료');
@@ -1039,7 +1038,7 @@
                 ctx.drawImage(img, 0, sy, img.width, sh, 0, 0, canvas.width, canvas.height);
 
                 const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
-                const outFileName = `1000_${ts}_${cfg.tag}.jpg`;
+                const outFileName = `${ts}_1000_${cfg.tag}.jpg`;
 
                 await saveFileDirect(dirHandle, outFileName, blob);
                 appendStatus(`🧩 ${outFileName}`, '저장 완료');
@@ -1197,14 +1196,14 @@
         }
     }, { passive: false });
 
-    // 콜라주 자동 저장
+    // 콜라주 자동 저장 ({ts}_{cWidth}_collage.jpg)
     collageDownloadBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
         if (!dirHandle) return;
 
         const ts = getTimeStampString();
         const cWidth = parseInt(document.getElementById('c-width').value) || 1000;
-        const fileName = `${cWidth}_${ts}_collage.jpg`;
+        const fileName = `${ts}_${cWidth}_collage.jpg`;
 
         const blob = await new Promise(res => collageCanvas.toBlob(res, 'image/jpeg', 0.92));
         await saveFileDirect(dirHandle, fileName, blob);
@@ -1250,7 +1249,7 @@
             ctx.drawImage(img, 0, 0);
 
             const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-            const outFileName = `${img.width}_${ts}.png`;
+            const outFileName = `${ts}_${img.width}.png`;
 
             await saveFileDirect(dirHandle, outFileName, blob);
             appendStatus(`💎 ${outFileName}`, 'PNG 저장 완료');
