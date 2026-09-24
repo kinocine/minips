@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kinocine Mini Photoshop v3.6</title>
+    <title>Kinocine Mini Photoshop v3.7</title>
     <!-- HEIC/HEIF 포맷 지원 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <style>
@@ -25,7 +25,7 @@
             align-items: center;
         }
         .container {
-            max-width: 960px;
+            max-width: 980px;
             width: 100%;
             background: var(--card-bg);
             padding: 25px;
@@ -52,12 +52,12 @@
         }
         .tab-btn {
             flex: 1;
-            min-width: 140px;
-            padding: 12px 8px;
+            min-width: 120px;
+            padding: 12px 6px;
             background: #f1f3f5;
             border: none;
             border-radius: 8px 8px 0 0;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             color: #495057;
             cursor: pointer;
@@ -66,6 +66,15 @@
         }
         .tab-btn.active {
             background: var(--primary-color);
+            color: white;
+        }
+        /* PNG 변환 탭 강조 스타일 */
+        .tab-btn.png-tab {
+            background: #e7f5ff;
+            color: #1c7ed6;
+        }
+        .tab-btn.png-tab.active {
+            background: #1c7ed6;
             color: white;
         }
 
@@ -135,6 +144,12 @@
         }
         .btn:hover { background-color: #b80710; }
         .btn:disabled { background-color: #dee2e6; color: #868e96; cursor: not-allowed; }
+        .btn-blue {
+            background-color: #1c7ed6;
+        }
+        .btn-blue:hover {
+            background-color: #1864ab;
+        }
 
         /* 캔버스 및 리스트 컨테이너 */
         .canvas-container {
@@ -201,7 +216,7 @@
         /* 미리보기 그리드 */
         .preview-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 14px;
             margin-bottom: 20px;
         }
@@ -224,6 +239,7 @@
             font-weight: bold;
             margin-top: 8px;
             color: #495057;
+            word-break: break-all;
         }
 
         /* 수동 멀티 크롭 모달 */
@@ -243,14 +259,15 @@
 <body>
 
 <div class="container">
-    <h1>Kinocine Mini Photoshop v3.6</h1>
+    <h1>Kinocine Mini Photoshop v3.7</h1>
 
-    <!-- 탭 메뉴 -->
+    <!-- 탭 메뉴 (1234 옆에 PNG로 추가) -->
     <div class="tab-menu">
-        <button class="tab-btn active" onclick="switchTab('slice')">🎞️ 균등 슬라이드 분할</button>
-        <button class="tab-btn" onclick="switchTab('block-slice')">🧩 덩어리 자르기 (1:2 / 1:3)</button>
-        <button class="tab-btn" onclick="switchTab('resizer')">⚡ 스마트 리사이즈 & 멀티크롭</button>
-        <button class="tab-btn" onclick="switchTab('collage')">🎬 분할 콜라주 메이커</button>
+        <button class="tab-btn active" onclick="switchTab('slice')">🎞️ 슬라이드 분할</button>
+        <button class="tab-btn" onclick="switchTab('block-slice')">🧩 덩어리 자르기</button>
+        <button class="tab-btn" onclick="switchTab('resizer')">⚡ 리사이즈 & 크롭</button>
+        <button class="tab-btn" onclick="switchTab('collage')">🎬 콜라주 메이커</button>
+        <button class="tab-btn png-tab" onclick="switchTab('png-convert')">💎 PNG로</button>
     </div>
 
     <!-- 공통 업로드 드롭존 -->
@@ -289,7 +306,7 @@
     <!-- TAB 1: 덩어리 자르기 (1:2, 1:3 등) -->
     <div id="tab-block-slice" class="tab-content">
         <div class="tip-box">
-            💡 <strong>사용 방법:</strong> 모자이크 보도스틸을 <strong>상단 덩어리</strong>와 <strong>하단 덩어리</strong> 2장으로 깔끔하게 잘라냅니다. 결과물은 둘 다 <strong>가로 1000px 고화질 JPG</strong>로 저장됩니다.
+            💡 <strong>사용 방법:</strong> 모자이크 보도스틸을 <strong>상단 덩어리</strong>와 <strong>하단 덩어리</strong> 2장으로 잘라냅니다. 결과물은 둘 다 <strong>가로 1000px 고화질 JPG</strong>로 저장됩니다.
         </div>
         <div class="controls">
             <div class="control-group">
@@ -351,20 +368,24 @@
                 <label>경계선 색상</label>
                 <input type="color" id="c-border-color" value="#000000">
             </div>
-            <div class="control-group">
-                <label>저장 포맷</label>
-                <select id="c-save-format">
-                    <option value="image/jpeg" selected>JPG</option>
-                    <option value="image/png">PNG</option>
-                    <option value="image/webp">WebP</option>
-                </select>
-            </div>
         </div>
         <div class="canvas-container">
             <canvas id="collage-canvas"></canvas>
         </div>
         <div class="item-list" id="collage-item-list"></div>
-        <button id="collage-download-btn" class="btn" disabled>🎬 완성된 콜라주 썸네일 다운로드</button>
+        <button id="collage-download-btn" class="btn" disabled>🎬 완성된 콜라주 JPG 다운로드</button>
+    </div>
+
+    <!-- TAB 4: [PNG로] 전용 변환기 (새로 추가) -->
+    <div id="tab-png-convert" class="tab-content">
+        <div class="tip-box" style="background:#e7f5ff; border-left-color:#1c7ed6; color:#1864ab;">
+            💎 <strong>사용 방법:</strong> 작업 완료된 결과물 중 PNG로 바꿀 사진들을 올려주세요. 화질 손실 없이 <strong>무손실 PNG 포맷</strong>으로 즉시 변환하여 저장합니다.
+        </div>
+        <div id="png-preview-container" class="preview-grid"></div>
+        <div style="display: flex; gap: 10px;">
+            <button id="png-folder-save-btn" class="btn btn-blue" style="flex: 1;" disabled>📂 날짜 폴더에 PNG 일괄 저장</button>
+            <button id="png-download-all-btn" class="btn" style="flex: 1; background-color: #343a40;" disabled>💾 개별 다운로드</button>
+        </div>
     </div>
 
     <!-- 변환 상태 출력 박스 -->
@@ -430,6 +451,12 @@
     let collageImages = []; 
     let activeDragIndex = -1, startX = 0, startY = 0, initialOffsetX = 0, initialOffsetY = 0, draggedCardIndex = null;
 
+    // TAB 4 (PNG 변환) 변수
+    const pngPreviewContainer = document.getElementById('png-preview-container');
+    const pngFolderSaveBtn = document.getElementById('png-folder-save-btn');
+    const pngDownloadAllBtn = document.getElementById('png-download-all-btn');
+    let pngLoadedImages = [];
+
     // 탭 전환
     function switchTab(tabName) {
         activeTab = tabName;
@@ -448,10 +475,14 @@
             document.querySelectorAll('.tab-btn')[2].classList.add('active');
             document.getElementById('tab-resizer').classList.add('active');
             dropzoneText.textContent = "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
-        } else {
+        } else if (tabName === 'collage') {
             document.querySelectorAll('.tab-btn')[3].classList.add('active');
             document.getElementById('tab-collage').classList.add('active');
             dropzoneText.textContent = "📸 콜라주 합성할 사진들을 드래그앤드롭 하세요";
+        } else if (tabName === 'png-convert') {
+            document.querySelectorAll('.tab-btn')[4].classList.add('active');
+            document.getElementById('tab-png-convert').classList.add('active');
+            dropzoneText.textContent = "💎 PNG로 포맷 변경할 최종 작업 사진들을 드래그앤드롭 하세요";
         }
     }
 
@@ -523,7 +554,7 @@
                 openCropEditor();
             }
 
-        } else {
+        } else if (activeTab === 'collage') {
             for (const file of validFiles) {
                 try {
                     const imgObj = await loadImage(file);
@@ -532,6 +563,26 @@
             }
             updateCollageUI();
             renderCollageCanvas();
+
+        } else if (activeTab === 'png-convert') {
+            pngLoadedImages = [];
+            pngPreviewContainer.innerHTML = '⏳ PNG 변환을 준비하고 있습니다...';
+            pngFolderSaveBtn.disabled = true;
+            pngDownloadAllBtn.disabled = true;
+
+            for (const file of validFiles) {
+                try {
+                    const imgObj = await loadImage(file);
+                    pngLoadedImages.push({ file, imgObj });
+                } catch (err) { console.error("PNG 이미지 로드 실패:", err); }
+            }
+
+            if (pngLoadedImages.length > 0) {
+                renderPngPreviews();
+                pngFolderSaveBtn.disabled = false;
+                pngDownloadAllBtn.disabled = false;
+                dropzoneText.innerHTML = `💎 총 <strong>${pngLoadedImages.length}개</strong>의 사진이 PNG 변환 준비되었습니다.`;
+            }
         }
     }
 
@@ -558,7 +609,7 @@
         });
     }
 
-    // ================= [TAB 0] 슬라이드 분할 로직 =================
+    // ================= [TAB 0] 슬라이드 분할 =================
     slicePartsSelect.addEventListener('change', () => {
         if (sliceLoadedImages.length > 0) renderSlicePreviews();
     });
@@ -640,32 +691,28 @@
         alert('모든 슬라이드 저장이 완료되었습니다!');
     });
 
-    // ================= [TAB 1] 덩어리 자르기 로직 (1:2, 2:1, 1:3, 3:1) =================
+    // ================= [TAB 1] 덩어리 자르기 (1:2, 2:1, 1:3, 3:1) =================
     blockModeSelect.addEventListener('change', () => {
         if (blockLoadedImages.length > 0) renderBlockPreviews();
     });
 
     function getBlockConfigs(mode) {
         if (mode === '1_2') {
-            // 총 3단 중 1:2
             return [
                 { start: 0, height: 1/3, label: '상단 1단 (1/3)', tag: 'top1' },
                 { start: 1/3, height: 2/3, label: '하단 2단 덩어리 (2/3)', tag: 'bot2' }
             ];
         } else if (mode === '2_1') {
-            // 총 3단 중 2:1
             return [
                 { start: 0, height: 2/3, label: '상단 2단 덩어리 (2/3)', tag: 'top2' },
                 { start: 2/3, height: 1/3, label: '하단 1단 (1/3)', tag: 'bot1' }
             ];
         } else if (mode === '1_3') {
-            // 총 4단 중 1:3
             return [
                 { start: 0, height: 1/4, label: '상단 1단 (1/4)', tag: 'top1' },
                 { start: 1/4, height: 3/4, label: '하단 3단 덩어리 (3/4)', tag: 'bot3' }
             ];
         } else if (mode === '3_1') {
-            // 총 4단 중 3:1
             return [
                 { start: 0, height: 3/4, label: '상단 3단 덩어리 (3/4)', tag: 'top3' },
                 { start: 3/4, height: 1/4, label: '하단 1단 (1/4)', tag: 'bot1' }
@@ -757,7 +804,7 @@
         alert('모든 덩어리 분할 저장이 완료되었습니다!');
     });
 
-    // ================= [TAB 2] 스마트 리사이저 & 멀티크롭 로직 =================
+    // ================= [TAB 2] 스마트 리사이저 & 멀티크롭 =================
     function openCropEditor() {
         const data = loadedResizerImages[currentEditIndex];
         document.getElementById('edit-progress').textContent = `${currentEditIndex + 1} / ${loadedResizerImages.length}`;
@@ -904,7 +951,7 @@
         alert('모든 사진 변환이 완료되었습니다!');
     });
 
-    // ================= [TAB 3] 분할 콜라주 로직 =================
+    // ================= [TAB 3] 분할 콜라주 =================
     ['c-width', 'c-height', 'c-border-w', 'c-border-color'].forEach(id => {
         document.getElementById(id).addEventListener('input', renderCollageCanvas);
     });
@@ -1051,12 +1098,86 @@
     }, { passive: false });
 
     collageDownloadBtn.addEventListener('click', () => {
-        const mimeType = document.getElementById('c-save-format').value;
-        const ext = mimeType === 'image/png' ? 'png' : (mimeType === 'image/webp' ? 'webp' : 'jpg');
         const link = document.createElement('a');
-        link.download = `kinocine_collage_${Date.now()}.${ext}`;
-        link.href = collageCanvas.toDataURL(mimeType, 0.92);
+        link.download = `kinocine_collage_${Date.now()}.jpg`;
+        link.href = collageCanvas.toDataURL('image/jpeg', 0.92);
         link.click();
+    });
+
+    // ================= [TAB 4] PNG로 변환 전용 로직 =================
+    function renderPngPreviews() {
+        pngPreviewContainer.innerHTML = '';
+        pngLoadedImages.forEach((item, idx) => {
+            const card = document.createElement('div');
+            card.className = 'preview-card';
+
+            const previewImg = document.createElement('img');
+            previewImg.src = item.imgObj.src;
+
+            const baseName = getBaseName(item.file.name);
+            const label = document.createElement('div');
+            label.className = 'preview-label';
+            label.textContent = `${baseName}.png`;
+
+            card.appendChild(previewImg);
+            card.appendChild(label);
+            pngPreviewContainer.appendChild(card);
+        });
+    }
+
+    // PNG 폴더 저장
+    pngFolderSaveBtn.addEventListener('click', async () => {
+        if (!pngLoadedImages.length || !window.showDirectoryPicker) {
+            alert('변환할 사진이 없거나 지원되지 않는 브라우저입니다.');
+            return;
+        }
+
+        let baseDirHandle;
+        try { baseDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
+
+        const dateFolderName = getTodayDateString();
+        let dateDirHandle = await baseDirHandle.getDirectoryHandle(dateFolderName, { create: true });
+
+        pngFolderSaveBtn.disabled = true;
+        statusList.style.display = 'block';
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dateFolderName}] PNG 무손실 변환 저장 중...</div>`;
+
+        for (const item of pngLoadedImages) {
+            const img = item.imgObj;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            const outFileName = `${getBaseName(item.file.name)}.png`;
+
+            await saveFileSafe(dateDirHandle, outFileName, blob);
+            appendStatus(`💎 ${outFileName}`, 'PNG 저장 완료');
+        }
+
+        pngFolderSaveBtn.disabled = false;
+        alert('모든 사진이 PNG로 성공적으로 저장되었습니다!');
+    });
+
+    // PNG 개별 브라우저 다운로드
+    pngDownloadAllBtn.addEventListener('click', () => {
+        if (!pngLoadedImages.length) return;
+
+        pngLoadedImages.forEach(item => {
+            const img = item.imgObj;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const link = document.createElement('a');
+            link.download = `${getBaseName(item.file.name)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
     });
 
     // ================= 유틸리티 함수 및 안전 저장 =================
@@ -1070,7 +1191,6 @@
         return lastDot === -1 ? originalName : originalName.substring(0, lastDot);
     }
 
-    // 파일명 중복 방지 저장 로직 (기자 사고 방지용)
     async function saveFileSafe(dirHandle, filename, blob) {
         let finalName = filename;
         let count = 1;
@@ -1130,4 +1250,3 @@
 
 </body>
 </html>
-```<ElicitationsGroup><FollowUp>방금 정리된 1:2와 1:3 덩어리 자르기 비율 외에, 추가로 자주 들어오는 다른 단수(예: 2:2 반반 분할 등) 조합도 필요하신가요?</FollowUp></ElicitationsGroup>
