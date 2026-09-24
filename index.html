@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kinocine Mini Photoshop v4.0 - Total Print Shop Edition</title>
+    <title>Kinocine Mini Photoshop v3.7</title>
     <!-- HEIC/HEIF 포맷 지원 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <style>
@@ -68,12 +68,12 @@
             background: var(--primary-color);
             color: white;
         }
-        /* PNG, 인쇄소 탭 강조 스타일 */
-        .tab-btn.special-tab {
+        /* PNG 변환 탭 강조 스타일 */
+        .tab-btn.png-tab {
             background: #e7f5ff;
             color: #1c7ed6;
         }
-        .tab-btn.special-tab.active {
+        .tab-btn.png-tab.active {
             background: #1c7ed6;
             color: white;
         }
@@ -144,8 +144,74 @@
         }
         .btn:hover { background-color: #b80710; }
         .btn:disabled { background-color: #dee2e6; color: #868e96; cursor: not-allowed; }
-        .btn-blue { background-color: #1c7ed6; }
-        .btn-blue:hover { background-color: #1864ab; }
+        .btn-blue {
+            background-color: #1c7ed6;
+        }
+        .btn-blue:hover {
+            background-color: #1864ab;
+        }
+
+        /* 캔버스 및 리스트 컨테이너 */
+        .canvas-container {
+            position: relative;
+            max-width: 100%;
+            overflow: auto;
+            border: 2px solid #343a40;
+            border-radius: 6px;
+            background: #1a1a1a;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+            user-select: none;
+        }
+        canvas { display: block; margin: 0 auto; }
+
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .item-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            gap: 12px;
+            cursor: grab;
+        }
+        .item-card.dragging { opacity: 0.5; background: #e7f5ff; border: 2px dashed #1c7ed6; }
+        .item-thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
+        .item-info { flex: 1; overflow: hidden; }
+        .item-name { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .btn-small { padding: 5px 8px; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; color: white; }
+        .btn-danger { background: #e03131; }
+        .btn-danger:hover { background: #c92a2a; }
+
+        .tip-box {
+            background: #e7f5ff;
+            border-left: 4px solid #1c7ed6;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #1864ab;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        #status-list {
+            margin-top: 20px;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            background: #fff;
+        }
+        .status-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f3f5; font-size: 13px; }
 
         /* 미리보기 그리드 */
         .preview-grid {
@@ -161,7 +227,7 @@
             background: #f8f9fa;
             text-align: center;
         }
-        .preview-card img, .preview-card canvas {
+        .preview-card img {
             width: 100%;
             height: auto;
             border-radius: 4px;
@@ -176,117 +242,220 @@
             word-break: break-all;
         }
 
-        .tip-box {
-            background: #e7f5ff;
-            border-left: 4px solid #1c7ed6;
-            padding: 10px 14px;
-            font-size: 13px;
-            color: #1864ab;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            line-height: 1.5;
+        /* 수동 멀티 크롭 모달 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center;
+            z-index: 1000; overflow-y: auto; padding: 20px; box-sizing: border-box;
         }
+        .modal-content { background: #fff; padding: 25px; border-radius: 12px; max-width: 760px; width: 100%; margin: auto; }
+        .crop-sections { display: flex; flex-direction: column; gap: 20px; margin-bottom: 25px; align-items: center; }
+        .crop-container { position: relative; overflow: hidden; background: #343a40; border: 2px solid #adb5bd; border-radius: 4px; cursor: grab; max-width: 100%; touch-action: none; }
+        .crop-container img { position: absolute; pointer-events: none; user-select: none; }
+        .crop-720 { aspect-ratio: 720 / 420; width: 100%; max-width: 720px; }
+        .crop-500 { aspect-ratio: 500 / 500; width: 100%; max-width: 500px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Kinocine Mini Photoshop v4.0</h1>
+    <h1>Kinocine Mini Photoshop v3.7</h1>
 
+    <!-- 탭 메뉴 (1234 옆에 PNG로 추가) -->
     <div class="tab-menu">
-        <button class="tab-btn active" onclick="switchTab('resizer')">⚡ 리사이즈 & 크롭</button>
-        <button class="tab-btn" onclick="switchTab('slice')">🎞️ 슬라이드 분할</button>
+        <button class="tab-btn active" onclick="switchTab('slice')">🎞️ 슬라이드 분할</button>
         <button class="tab-btn" onclick="switchTab('block-slice')">🧩 덩어리 자르기</button>
-        <button class="tab-btn special-tab" onclick="switchTab('png-convert')">💎 PNG로</button>
-        <!-- 인쇄소 탭 신설 및 통합 -->
-        <button class="tab-btn special-tab" onclick="switchTab('printshop')">📰 인쇄소</button>
+        <button class="tab-btn" onclick="switchTab('resizer')">⚡ 리사이즈 & 크롭</button>
+        <button class="tab-btn" onclick="switchTab('collage')">🎬 콜라주 메이커</button>
+        <button class="tab-btn png-tab" onclick="switchTab('png-convert')">💎 PNG로</button>
     </div>
 
     <!-- 공통 업로드 드롭존 -->
     <div class="dropzone" id="dropzone">
-        <p id="dropzone-text">📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요 (WebP, JPG, PNG, HEIC 등)</p>
+        <p id="dropzone-text">📸 세로로 긴 분할용 이미지를 드래그앤드롭 하세요 (WebP, JPG, PNG, HEIC 등)</p>
         <input type="file" id="file-input" multiple accept="image/*,.heic,.heif,.webp,.avif" style="display: none;">
     </div>
 
-    <!-- TAB 1 (기본): 스마트 리사이즈 & 멀티 크롭 -->
-    <div id="tab-resizer" class="tab-content active">
-        <!-- (기존 v3.8 리사이저 콘텐츠 유지) -->
-    </div>
-
-    <!-- TAB 2: 세로 균등 슬라이드 분할 -->
-    <div id="tab-slice" class="tab-content">
-        <!-- (기존 v3.8 슬라이드 분할 콘텐츠 유지) -->
-    </div>
-
-    <!-- TAB 3: 덩어리 자르기 -->
-    <div id="tab-block-slice" class="tab-content">
-        <!-- (기존 v3.8 덩어리 자르기 콘텐츠 유지) -->
-    </div>
-
-    <!-- TAB 4: PNG로 변환 -->
-    <div id="tab-png-convert" class="tab-content">
-        <!-- (기존 v3.8 PNG 변환 콘텐츠 유지) -->
-    </div>
-
-    <!-- TAB 5 (NEW v4.0): 인쇄소 (스케치 & 툰 통합) -->
-    <div id="tab-printshop" class="tab-content">
+    <!-- TAB 0: 세로 균등 슬라이드 분할 -->
+    <div id="tab-slice" class="tab-content active">
         <div class="tip-box">
-            🎨 <strong>📰 인쇄소 (v4.0 종합):</strong> 저작권 우회를 위해 사진을 그림이나 인쇄물 스타일로 재창작합니다.<br>
-            메타의 소벨 엔진을 기반으로 한 <strong>'법정 스케치'</strong>와 <strong>'툰/애니메이션'</strong> 스타일을 한 곳에서 선택할 수 있습니다.
+            💡 <strong>사용 방법:</strong> 2~8개로 균등하게 세로로 붙어 있는 스틸컷을 각 조각 <strong>가로 1000px 고화질 JPG</strong>로 균등 분할합니다.
         </div>
         <div class="controls">
             <div class="control-group">
-                <label>변환 스타일 선택</label>
-                <select id="ps-style">
-                    <option value="sketch" selected>✏️ 법정 스케치 (소벨 엔진)</option>
-                    <option value="toon">🎨 애니메이션 (Toon Shading)</option>
+                <label>세로 분할 개수</label>
+                <select id="slice-parts-select">
+                    <option value="2">2등분 (상/하 2컷)</option>
+                    <option value="3">3등분 (상/중/하 3컷)</option>
+                    <option value="4" selected>4등분 (보도스틸 표준 4컷)</option>
+                    <option value="5">5등분</option>
+                    <option value="6">6등분</option>
+                    <option value="7">7등분</option>
+                    <option value="8">8등분</option>
                 </select>
             </div>
             <div class="control-group">
-                <label>스타일 농도</label>
-                <select id="ps-weight">
-                    <option value="1">가볍게 (세밀한 표현)</option>
-                    <option value="2" selected>보통 (표준 스타일)</option>
-                    <option value="3">짙게 (charcoal/강력툰)</option>
+                <label>저장 규격</label>
+                <input type="text" value="가로 1000px JPG 고정" disabled>
+            </div>
+        </div>
+        <div id="slice-preview-container" class="preview-grid"></div>
+        <button id="slice-process-btn" class="btn" disabled>분할 이미지 가로 1000px JPG 일괄 저장 (날짜 폴더)</button>
+    </div>
+
+    <!-- TAB 1: 덩어리 자르기 (1:2, 1:3 등) -->
+    <div id="tab-block-slice" class="tab-content">
+        <div class="tip-box">
+            💡 <strong>사용 방법:</strong> 모자이크 보도스틸을 <strong>상단 덩어리</strong>와 <strong>하단 덩어리</strong> 2장으로 잘라냅니다. 결과물은 둘 다 <strong>가로 1000px 고화질 JPG</strong>로 저장됩니다.
+        </div>
+        <div class="controls">
+            <div class="control-group">
+                <label>덩어리 분할 비율 선택</label>
+                <select id="block-mode-select">
+                    <option value="1_2" selected>1 : 2 (상단 1단 + 하단 2단 덩어리 / 총 3단)</option>
+                    <option value="2_1">2 : 1 (상단 2단 덩어리 + 하단 1단 / 총 3단)</option>
+                    <option value="1_3">1 : 3 (상단 1단 + 하단 3단 덩어리 / 총 4단)</option>
+                    <option value="3_1">3 : 1 (상단 3단 덩어리 + 하단 1단 / 총 4단)</option>
                 </select>
             </div>
             <div class="control-group">
-                <label>배경 종이 질감</label>
-                <select id="ps-bg-texture">
-                    <option value="white" selected>흰색 종이</option>
-                    <option value="canvas">캔버스 질감</option>
-                    <option value="aged">오래된 종이</option>
+                <label>저장 규격</label>
+                <input type="text" value="가로 1000px JPG 고정 (2장 생성)" disabled>
+            </div>
+        </div>
+        <div id="block-preview-container" class="preview-grid"></div>
+        <button id="block-process-btn" class="btn" disabled>위/아래 덩어리 가로 1000px JPG 저장 (날짜 폴더)</button>
+    </div>
+
+    <!-- TAB 2: 스마트 리사이즈 & 멀티 크롭 -->
+    <div id="tab-resizer" class="tab-content">
+        <div class="controls">
+            <div class="control-group">
+                <label>기본 이미지 가로 크기 (px)</label>
+                <input type="number" id="r-target-width" value="1000" min="10">
+            </div>
+            <div class="control-group">
+                <label>압축 품질</label>
+                <select id="r-img-quality">
+                    <option value="0.92" selected>고품질 (92%)</option>
+                    <option value="0.85">용량최적화 (85%)</option>
+                    <option value="0.95">원본수준 (95%)</option>
                 </select>
             </div>
         </div>
-        
-        <!-- 미리보기 및 다운로드 버튼 -->
-        <div id="printshop-preview-container" class="preview-card" style="display: none;">
-            <canvas id="printshop-canvas"></canvas>
-            <div id="ps-filename" class="preview-label"></div>
+        <button id="resizer-process-btn" class="btn" disabled>저장할 폴더 지정 및 변환 시작 (YYYY-MM-DD 폴더 자동생성)</button>
+    </div>
+
+    <!-- TAB 3: 분할 콜라주 메이커 -->
+    <div id="tab-collage" class="tab-content">
+        <div class="tip-box">
+            💡 <strong>사용 방법:</strong> 캔버스에서 마우스 드래그로 위치 조절, <strong>Ctrl + 휠</strong>로 확대/축소, 목록에서 순서를 드래그하여 교체할 수 있습니다.
         </div>
-        <button id="printshop-download-btn" class="btn btn-blue" disabled>🎬 변환된 이미지 JPG 다운로드</button>
+        <div class="controls">
+            <div class="control-group">
+                <label>전체 너비 (px)</label>
+                <input type="number" id="c-width" value="1000" step="10">
+            </div>
+            <div class="control-group">
+                <label>전체 높이 (px)</label>
+                <input type="number" id="c-height" value="588" step="10">
+            </div>
+            <div class="control-group">
+                <label>경계선 두께 (px)</label>
+                <input type="number" id="c-border-w" value="6" min="0" max="30">
+            </div>
+            <div class="control-group">
+                <label>경계선 색상</label>
+                <input type="color" id="c-border-color" value="#000000">
+            </div>
+        </div>
+        <div class="canvas-container">
+            <canvas id="collage-canvas"></canvas>
+        </div>
+        <div class="item-list" id="collage-item-list"></div>
+        <button id="collage-download-btn" class="btn" disabled>🎬 완성된 콜라주 JPG 다운로드</button>
+    </div>
+
+    <!-- TAB 4: [PNG로] 전용 변환기 (새로 추가) -->
+    <div id="tab-png-convert" class="tab-content">
+        <div class="tip-box" style="background:#e7f5ff; border-left-color:#1c7ed6; color:#1864ab;">
+            💎 <strong>사용 방법:</strong> 작업 완료된 결과물 중 PNG로 바꿀 사진들을 올려주세요. 화질 손실 없이 <strong>무손실 PNG 포맷</strong>으로 즉시 변환하여 저장합니다.
+        </div>
+        <div id="png-preview-container" class="preview-grid"></div>
+        <div style="display: flex; gap: 10px;">
+            <button id="png-folder-save-btn" class="btn btn-blue" style="flex: 1;" disabled>📂 날짜 폴더에 PNG 일괄 저장</button>
+            <button id="png-download-all-btn" class="btn" style="flex: 1; background-color: #343a40;" disabled>💾 개별 다운로드</button>
+        </div>
+    </div>
+
+    <!-- 변환 상태 출력 박스 -->
+    <div id="status-list" style="display: none;"></div>
+</div>
+
+<!-- 수동 멀티크롭 모달 (TAB 2 전용) -->
+<div class="modal-overlay" id="editor-modal">
+    <div class="modal-content">
+        <div style="text-align:center; margin-bottom:15px;">
+            <h2>썸네일 위치 조정 (<span id="edit-progress">1/1</span>)</h2>
+            <p id="edit-filename" style="color:#868e96; margin:0; font-size:14px;"></p>
+            <p style="color:var(--primary-color); font-weight:bold; margin-top:5px; font-size:13px;">💡 이미지를 드래그하여 대표 구도를 조절하세요.</p>
+        </div>
+        <div class="crop-sections">
+            <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-weight:bold; margin-bottom:6px; font-size:13px;">가로형 썸네일 (720 x 420)</div>
+                <div id="crop-container-720" class="crop-container crop-720">
+                    <img id="crop-img-720" src="" alt="720 Preview">
+                </div>
+            </div>
+            <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-weight:bold; margin-bottom:6px; font-size:13px;">정방형 썸네일 (500 x 500)</div>
+                <div id="crop-container-500" class="crop-container crop-500">
+                    <img id="crop-img-500" src="" alt="500 Preview">
+                </div>
+            </div>
+        </div>
+        <button id="btn-next-edit" class="btn">다음 설정 ➡</button>
     </div>
 </div>
 
 <script>
-    let activeTab = 'resizer';
+    let activeTab = 'slice';
     const dropzone = document.getElementById('dropzone');
     const dropzoneText = document.getElementById('dropzone-text');
     const fileInput = document.getElementById('file-input');
+    const statusList = document.getElementById('status-list');
 
-    // TAB 1 (스마트 리사이저)
+    // TAB 0 (슬라이드 분할) 변수
+    const sliceProcessBtn = document.getElementById('slice-process-btn');
+    const slicePartsSelect = document.getElementById('slice-parts-select');
+    const slicePreviewContainer = document.getElementById('slice-preview-container');
+    let sliceLoadedImages = [];
+
+    // TAB 1 (덩어리 자르기) 변수
+    const blockModeSelect = document.getElementById('block-mode-select');
+    const blockPreviewContainer = document.getElementById('block-preview-container');
+    const blockProcessBtn = document.getElementById('block-process-btn');
+    let blockLoadedImages = [];
+
+    // TAB 2 (스마트 리사이저) 변수
     const resizerBtn = document.getElementById('resizer-process-btn');
     let loadedResizerImages = [];
+    let currentEditIndex = 0;
+    let getCropData720 = null, getCropData500 = null;
 
-    // TAB 5 (NEW v4.0: 인쇄소 통합)
-    const psCanvas = document.getElementById('printshop-canvas');
-    const psCtx = psCanvas.getContext('2d');
-    const printshopPreviewContainer = document.getElementById('printshop-preview-container');
-    const printshopDownloadBtn = document.getElementById('printshop-download-btn');
-    const psFileNameDisplay = document.getElementById('ps-filename');
-    let psOriginalImg = null;
-    let psFileName = '';
+    // TAB 3 (콜라주) 변수
+    const collageCanvas = document.getElementById('collage-canvas');
+    const collageCtx = collageCanvas.getContext('2d');
+    const collageItemList = document.getElementById('collage-item-list');
+    const collageDownloadBtn = document.getElementById('collage-download-btn');
+    let collageImages = []; 
+    let activeDragIndex = -1, startX = 0, startY = 0, initialOffsetX = 0, initialOffsetY = 0, draggedCardIndex = null;
+
+    // TAB 4 (PNG 변환) 변수
+    const pngPreviewContainer = document.getElementById('png-preview-container');
+    const pngFolderSaveBtn = document.getElementById('png-folder-save-btn');
+    const pngDownloadAllBtn = document.getElementById('png-download-all-btn');
+    let pngLoadedImages = [];
 
     // 탭 전환
     function switchTab(tabName) {
@@ -294,139 +463,789 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
-        if (tabName === 'resizer') {
+        if (tabName === 'slice') {
             document.querySelectorAll('.tab-btn')[0].classList.add('active');
-            document.getElementById('tab-resizer').classList.add('active');
-            dropzoneText.textContent = "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
-        } else if (tabName === 'slice') {
-            document.querySelectorAll('.tab-btn')[1].classList.add('active');
             document.getElementById('tab-slice').classList.add('active');
-            dropzoneText.textContent = "📸 세로로 긴 분할용 이미지를 드래그앤드롭 하세요";
+            dropzoneText.textContent = "📸 세로로 균등하게 긴 분할용 이미지를 드래그앤드롭 하세요";
         } else if (tabName === 'block-slice') {
-            document.querySelectorAll('.tab-btn')[2].classList.add('active');
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
             document.getElementById('tab-block-slice').classList.add('active');
             dropzoneText.textContent = "📸 3단/4단 모자이크 스틸컷 이미지를 드래그앤드롭 하세요";
-        } else if (tabName === 'png-convert') {
+        } else if (tabName === 'resizer') {
+            document.querySelectorAll('.tab-btn')[2].classList.add('active');
+            document.getElementById('tab-resizer').classList.add('active');
+            dropzoneText.textContent = "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
+        } else if (tabName === 'collage') {
             document.querySelectorAll('.tab-btn')[3].classList.add('active');
+            document.getElementById('tab-collage').classList.add('active');
+            dropzoneText.textContent = "📸 콜라주 합성할 사진들을 드래그앤드롭 하세요";
+        } else if (tabName === 'png-convert') {
+            document.querySelectorAll('.tab-btn')[4].classList.add('active');
             document.getElementById('tab-png-convert').classList.add('active');
             dropzoneText.textContent = "💎 PNG로 포맷 변경할 최종 작업 사진들을 드래그앤드롭 하세요";
-        } else if (tabName === 'printshop') {
-            document.querySelectorAll('.tab-btn')[4].classList.add('active');
-            document.getElementById('tab-printshop').classList.add('active');
-            dropzoneText.textContent = "🎨 스케치나 툰 스타일로 변환할 사진을 드래그앤드롭 하세요 (1장)";
-            // 인쇄소 탭으로 전환 시 이전 미리보기 초기화
-            printshopPreviewContainer.style.display = 'none';
-            printshopDownloadBtn.disabled = true;
         }
     }
 
     // 파일 업로드 공통 이벤트
     dropzone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-    // ... (드래그 앤 드롭 이벤트 생략, 기존 코드와 동일) ...
-
-    // 파일 처리 통합
-    async function handleFiles(files) {
-        // ... (유효성 검사 등 생략) ...
-
-        if (activeTab === 'printshop') {
-            dropzoneText.innerHTML = `⏳ 인쇄소 작업 중... (AI가 그리는 중)`;
-            printshopDownloadBtn.disabled = true;
-
-            const file = validFiles[0]; // 단일 파일만 처리
-            psFileName = file.name;
-
-            try {
-                psOriginalImg = await loadImage(file);
-                convertImgAtPrintShop();
-            } catch (err) { console.error("인쇄소 변환 실패:", err); }
-
-        } else {
-            // ... (기존 리사이저, 슬라이드 등의 처리 로직) ...
-        }
-    }
-
-    // Blob URL 즉시 파기로 인한 흑백/빈화면 버그 수정된 loadImage 사용
-    async function loadImage(file) {
-        // ... (HEIC 변환 및 이미지 로드 로직, 기존 코드와 동일) ...
-    }
-
-    // ================= [TAB 5] v4.0 인쇄소 핵심 통합 로직 =================
-    ['ps-style', 'ps-weight', 'ps-bg-texture'].forEach(id => {
-        document.getElementById(id).addEventListener('change', () => {
-            if (psOriginalImg) convertImgAtPrintShop();
-        });
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#111'; });
+    dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'var(--primary-color)'; });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = 'var(--primary-color)';
+        if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
     });
 
-    function convertImgAtPrintShop() {
-        const style = document.getElementById('ps-style').value;
-        const weight = parseInt(document.getElementById('ps-weight').value);
-        const bgTexture = document.getElementById('ps-bg-texture').value;
+    async function handleFiles(files) {
+        const validFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.name.match(/\.(heic|heif|webp|avif|jpg|jpeg|png)$/i));
+        if (validFiles.length === 0) return;
 
-        // 원본 비율 유지하며 리사이즈 (가로 1000px 기준)
-        const targetW = 1000;
-        const scale = targetW / psOriginalImg.width;
-        const targetH = psOriginalImg.height * scale;
+        if (activeTab === 'slice') {
+            sliceLoadedImages = [];
+            slicePreviewContainer.innerHTML = '⏳ 이미지를 로딩하고 있습니다...';
+            sliceProcessBtn.disabled = true;
 
-        psCanvas.width = targetW;
-        psCanvas.height = targetH;
-
-        // 1. 배경 설정 (종이 질감)
-        if (bgTexture === 'aged') psCtx.fillStyle = '#efe6d1';
-        else if (bgTexture === 'canvas') psCtx.fillStyle = '#f6f1e8';
-        else psCtx.fillStyle = '#ffffff';
-        psCtx.fillRect(0, 0, targetW, targetH);
-
-        // 노이즈 추가 (종이 질감) - white가 아닐 때만
-        if (bgTexture !== 'white') {
-            psCtx.save();
-            psCtx.globalAlpha = 0.06;
-            psCtx.fillStyle = '#000';
-            for (let i = 0; i < 4000; i++) {
-                psCtx.fillRect(Math.random() * targetW, Math.random() * targetH, 1, 1.2);
+            for (const file of validFiles) {
+                try {
+                    const imgObj = await loadImage(file);
+                    sliceLoadedImages.push({ file, imgObj });
+                } catch (err) { console.error("이미지 로드 실패:", err); }
             }
-            psCtx.restore();
+
+            if (sliceLoadedImages.length > 0) {
+                renderSlicePreviews();
+                sliceProcessBtn.disabled = false;
+                dropzoneText.innerHTML = `📸 총 <strong>${sliceLoadedImages.length}개</strong>의 슬라이드 이미지가 준비되었습니다.`;
+            }
+
+        } else if (activeTab === 'block-slice') {
+            blockLoadedImages = [];
+            blockPreviewContainer.innerHTML = '⏳ 이미지를 로딩하고 있습니다...';
+            blockProcessBtn.disabled = true;
+
+            for (const file of validFiles) {
+                try {
+                    const imgObj = await loadImage(file);
+                    blockLoadedImages.push({ file, imgObj });
+                } catch (err) { console.error("이미지 로드 실패:", err); }
+            }
+
+            if (blockLoadedImages.length > 0) {
+                renderBlockPreviews();
+                blockProcessBtn.disabled = false;
+                dropzoneText.innerHTML = `📸 총 <strong>${blockLoadedImages.length}개</strong>의 덩어리 분할 이미지가 준비되었습니다.`;
+            }
+
+        } else if (activeTab === 'resizer') {
+            loadedResizerImages = [];
+            dropzoneText.innerHTML = `⏳ 이미지 로딩 중...`;
+            resizerBtn.disabled = true;
+
+            for (const file of validFiles) {
+                try {
+                    const img = await loadImage(file);
+                    loadedResizerImages.push({ file, img, crop720: null, crop500: null });
+                } catch (err) { console.error("이미지 로드 실패:", err); }
+            }
+
+            if (loadedResizerImages.length > 0) {
+                currentEditIndex = 0;
+                openCropEditor();
+            }
+
+        } else if (activeTab === 'collage') {
+            for (const file of validFiles) {
+                try {
+                    const imgObj = await loadImage(file);
+                    collageImages.push({ id: Date.now() + Math.random(), file, imgObj, offsetX: 0, offsetY: 0, zoom: 1.0 });
+                } catch (err) { console.error("이미지 로드 오류:", err); }
+            }
+            updateCollageUI();
+            renderCollageCanvas();
+
+        } else if (activeTab === 'png-convert') {
+            pngLoadedImages = [];
+            pngPreviewContainer.innerHTML = '⏳ PNG 변환을 준비하고 있습니다...';
+            pngFolderSaveBtn.disabled = true;
+            pngDownloadAllBtn.disabled = true;
+
+            for (const file of validFiles) {
+                try {
+                    const imgObj = await loadImage(file);
+                    pngLoadedImages.push({ file, imgObj });
+                } catch (err) { console.error("PNG 이미지 로드 실패:", err); }
+            }
+
+            if (pngLoadedImages.length > 0) {
+                renderPngPreviews();
+                pngFolderSaveBtn.disabled = false;
+                pngDownloadAllBtn.disabled = false;
+                dropzoneText.innerHTML = `💎 총 <strong>${pngLoadedImages.length}개</strong>의 사진이 PNG 변환 준비되었습니다.`;
+            }
+        }
+    }
+
+    async function loadImage(file) {
+        let processBlob = file;
+        if (file.name.match(/\.(heic|heif)$/i) || file.type === 'image/heic' || file.type === 'image/heif') {
+            if (typeof heic2any !== 'undefined') {
+                const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.95 });
+                processBlob = Array.isArray(converted) ? converted[0] : converted;
+            }
+        }
+        return new Promise((resolve, reject) => {
+            const blobUrl = URL.createObjectURL(processBlob);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(blobUrl);
+                resolve(img);
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(blobUrl);
+                reject();
+            };
+            img.src = blobUrl;
+        });
+    }
+
+    // ================= [TAB 0] 슬라이드 분할 =================
+    slicePartsSelect.addEventListener('change', () => {
+        if (sliceLoadedImages.length > 0) renderSlicePreviews();
+    });
+
+    function renderSlicePreviews() {
+        slicePreviewContainer.innerHTML = '';
+        const parts = parseInt(slicePartsSelect.value);
+
+        sliceLoadedImages.forEach((item, imgIdx) => {
+            const img = item.imgObj;
+            const pieceHeight = img.height / parts;
+
+            for (let i = 0; i < parts; i++) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 300;
+                canvas.height = (pieceHeight * (300 / img.width));
+
+                ctx.drawImage(img, 0, i * pieceHeight, img.width, pieceHeight, 0, 0, canvas.width, canvas.height);
+
+                const card = document.createElement('div');
+                card.className = 'preview-card';
+                
+                const previewImg = document.createElement('img');
+                previewImg.src = canvas.toDataURL('image/jpeg', 0.8);
+                
+                const label = document.createElement('div');
+                label.className = 'preview-label';
+                label.textContent = `[${imgIdx + 1}] 조각 ${i + 1}/${parts} (1000w)`;
+
+                card.appendChild(previewImg);
+                card.appendChild(label);
+                slicePreviewContainer.appendChild(card);
+            }
+        });
+    }
+
+    sliceProcessBtn.addEventListener('click', async () => {
+        if (!sliceLoadedImages.length || !window.showDirectoryPicker) {
+            alert('사진이 없거나 지원되지 않는 브라우저입니다.');
+            return;
         }
 
-        // 2. 선택된 스타일에 따라 변환 수행
-        if (style === 'sketch') {
-            applySketchFilter(targetW, targetH, weight);
-        } else if (style === 'toon') {
-            applyToonFilter(targetW, targetH, weight);
+        let baseDirHandle;
+        try { baseDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
+
+        const dateFolderName = getTodayDateString();
+        let dateDirHandle = await baseDirHandle.getDirectoryHandle(dateFolderName, { create: true });
+
+        const parts = parseInt(slicePartsSelect.value);
+        sliceProcessBtn.disabled = true;
+        statusList.style.display = 'block';
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dateFolderName}] 슬라이드 1000px JPG 저장 중...</div>`;
+
+        for (const item of sliceLoadedImages) {
+            const img = item.imgObj;
+            const baseName = getBaseName(item.file.name);
+            const pieceHeight = img.height / parts;
+
+            for (let i = 0; i < parts; i++) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 1000;
+                canvas.height = pieceHeight * (1000 / img.width);
+                ctx.imageSmoothingQuality = 'high';
+
+                ctx.drawImage(img, 0, i * pieceHeight, img.width, pieceHeight, 0, 0, canvas.width, canvas.height);
+
+                const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+                const padNum = String(i + 1).padStart(2, '0');
+                const outFileName = `1000w_${baseName}_slide_${padNum}.jpg`;
+
+                await saveFileSafe(dateDirHandle, outFileName, blob);
+                appendStatus(`🎞️ ${outFileName}`, '저장 완료');
+            }
         }
 
-        // 미리보기 및 다운로드 버튼 활성화
-        printshopPreviewContainer.style.display = 'block';
-        psFileNameDisplay.textContent = `${getBaseName(psFileName)}_${style}_v4.jpg`;
-        dropzoneText.innerHTML = `🎨 인쇄소 작업 완료! (스타일: ${style}, 농도: ${weight})`;
-        printshopDownloadBtn.disabled = false;
+        sliceProcessBtn.disabled = false;
+        alert('모든 슬라이드 저장이 완료되었습니다!');
+    });
+
+    // ================= [TAB 1] 덩어리 자르기 (1:2, 2:1, 1:3, 3:1) =================
+    blockModeSelect.addEventListener('change', () => {
+        if (blockLoadedImages.length > 0) renderBlockPreviews();
+    });
+
+    function getBlockConfigs(mode) {
+        if (mode === '1_2') {
+            return [
+                { start: 0, height: 1/3, label: '상단 1단 (1/3)', tag: 'top1' },
+                { start: 1/3, height: 2/3, label: '하단 2단 덩어리 (2/3)', tag: 'bot2' }
+            ];
+        } else if (mode === '2_1') {
+            return [
+                { start: 0, height: 2/3, label: '상단 2단 덩어리 (2/3)', tag: 'top2' },
+                { start: 2/3, height: 1/3, label: '하단 1단 (1/3)', tag: 'bot1' }
+            ];
+        } else if (mode === '1_3') {
+            return [
+                { start: 0, height: 1/4, label: '상단 1단 (1/4)', tag: 'top1' },
+                { start: 1/4, height: 3/4, label: '하단 3단 덩어리 (3/4)', tag: 'bot3' }
+            ];
+        } else if (mode === '3_1') {
+            return [
+                { start: 0, height: 3/4, label: '상단 3단 덩어리 (3/4)', tag: 'top3' },
+                { start: 3/4, height: 1/4, label: '하단 1단 (1/4)', tag: 'bot1' }
+            ];
+        }
+        return [];
     }
 
-    // 법정 스케치 (v4.0 소벨 엔진) - 메타의 정석 로직 적용
-    function applySketchFilter(W, H, weight) {
-        // ... (기존 v4.0 스케치 변환 로직 통합) ...
+    function renderBlockPreviews() {
+        blockPreviewContainer.innerHTML = '';
+        const mode = blockModeSelect.value;
+        const configs = getBlockConfigs(mode);
+
+        blockLoadedImages.forEach((item, imgIdx) => {
+            const img = item.imgObj;
+
+            configs.forEach(cfg => {
+                const sy = img.height * cfg.start;
+                const sh = img.height * cfg.height;
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 300;
+                canvas.height = sh * (300 / img.width);
+
+                ctx.drawImage(img, 0, sy, img.width, sh, 0, 0, canvas.width, canvas.height);
+
+                const card = document.createElement('div');
+                card.className = 'preview-card';
+
+                const previewImg = document.createElement('img');
+                previewImg.src = canvas.toDataURL('image/jpeg', 0.8);
+
+                const label = document.createElement('div');
+                label.className = 'preview-label';
+                label.textContent = `[${imgIdx + 1}] ${cfg.label} (1000w)`;
+
+                card.appendChild(previewImg);
+                card.appendChild(label);
+                blockPreviewContainer.appendChild(card);
+            });
+        });
     }
 
-    // 애니메이션 (Toon Shading) - 윤곽선 강조 + 색상 단순화
-    function applyToonFilter(W, H, weight) {
-        // ... (기존 툰 변환 로직 통합) ...
+    blockProcessBtn.addEventListener('click', async () => {
+        if (!blockLoadedImages.length || !window.showDirectoryPicker) {
+            alert('사진이 없거나 지원되지 않는 브라우저입니다.');
+            return;
+        }
+
+        let baseDirHandle;
+        try { baseDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
+
+        const dateFolderName = getTodayDateString();
+        let dateDirHandle = await baseDirHandle.getDirectoryHandle(dateFolderName, { create: true });
+
+        const mode = blockModeSelect.value;
+        const configs = getBlockConfigs(mode);
+
+        blockProcessBtn.disabled = true;
+        statusList.style.display = 'block';
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dateFolderName}] 덩어리(1000px JPG) 분할 저장 중...</div>`;
+
+        for (const item of blockLoadedImages) {
+            const img = item.imgObj;
+            const baseName = getBaseName(item.file.name);
+
+            for (const cfg of configs) {
+                const sy = img.height * cfg.start;
+                const sh = img.height * cfg.height;
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 1000;
+                canvas.height = sh * (1000 / img.width);
+                ctx.imageSmoothingQuality = 'high';
+
+                ctx.drawImage(img, 0, sy, img.width, sh, 0, 0, canvas.width, canvas.height);
+
+                const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+                const outFileName = `1000w_${baseName}_${cfg.tag}.jpg`;
+
+                await saveFileSafe(dateDirHandle, outFileName, blob);
+                appendStatus(`🧩 ${outFileName}`, '저장 완료');
+            }
+        }
+
+        blockProcessBtn.disabled = false;
+        alert('모든 덩어리 분할 저장이 완료되었습니다!');
+    });
+
+    // ================= [TAB 2] 스마트 리사이저 & 멀티크롭 =================
+    function openCropEditor() {
+        const data = loadedResizerImages[currentEditIndex];
+        document.getElementById('edit-progress').textContent = `${currentEditIndex + 1} / ${loadedResizerImages.length}`;
+        document.getElementById('edit-filename').textContent = data.file.name;
+        document.getElementById('editor-modal').style.display = 'flex';
+
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                getCropData720 = setupDraggableCrop(data.img, 720, 420, 'crop-container-720', 'crop-img-720');
+                getCropData500 = setupDraggableCrop(data.img, 500, 500, 'crop-container-500', 'crop-img-500');
+            }, 50);
+        });
+
+        const nextBtn = document.getElementById('btn-next-edit');
+        nextBtn.textContent = currentEditIndex === loadedResizerImages.length - 1 ? '모든 설정 완료 ✔' : '다음 이미지 ➡';
+        nextBtn.style.backgroundColor = currentEditIndex === loadedResizerImages.length - 1 ? '#2b8a3e' : 'var(--primary-color)';
     }
 
-    printshopDownloadBtn.addEventListener('click', () => {
-        const style = document.getElementById('ps-style').value;
+    document.getElementById('btn-next-edit').onclick = () => {
+        if (getCropData720 && getCropData500) {
+            loadedResizerImages[currentEditIndex].crop720 = getCropData720();
+            loadedResizerImages[currentEditIndex].crop500 = getCropData500();
+        }
+        currentEditIndex++;
+        if (currentEditIndex < loadedResizerImages.length) {
+            openCropEditor();
+        } else {
+            document.getElementById('editor-modal').style.display = 'none';
+            dropzoneText.innerHTML = `🔥 <strong>${loadedResizerImages.length}개</strong> 파일 크롭 영역 설정 완료`;
+            resizerBtn.disabled = false;
+        }
+    };
+
+    function setupDraggableCrop(imgObj, targetW, targetH, containerId, imgId) {
+        const container = document.getElementById(containerId);
+        const imgEl = document.getElementById(imgId);
+        imgEl.src = imgObj.src;
+
+        const containerWidth = container.clientWidth || targetW;
+        const uiScale = containerWidth / targetW;
+        const uiW = targetW * uiScale;
+        const uiH = targetH * uiScale;
+
+        const baseScale = Math.max(targetW / imgObj.width, targetH / imgObj.height);
+        const fitScale = Math.max(baseScale, (targetW * 1.15) / imgObj.width, (targetH * 1.15) / imgObj.height);
+
+        const scaledImgW = imgObj.width * fitScale * uiScale;
+        const scaledImgH = imgObj.height * fitScale * uiScale;
+
+        imgEl.style.width = scaledImgW + 'px';
+        imgEl.style.height = scaledImgH + 'px';
+
+        let currentX = (uiW - scaledImgW) / 2;
+        let currentY = (uiH - scaledImgH) / 2;
+        const minX = uiW - scaledImgW;
+        const minY = uiH - scaledImgH;
+
+        function updatePos() {
+            if (currentX > 0) currentX = 0;
+            if (currentY > 0) currentY = 0;
+            if (currentX < minX) currentX = minX;
+            if (currentY < minY) currentY = minY;
+
+            imgEl.style.left = currentX + 'px';
+            imgEl.style.top = currentY + 'px';
+        }
+        updatePos();
+
+        let isDragging = false, startX, startY, initialX, initialY;
+
+        const onMove = (e) => {
+            if (!isDragging) return;
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            currentX = initialX + (cx - startX);
+            currentY = initialY + (cy - startY);
+            updatePos();
+            if (e.cancelable) e.preventDefault();
+        };
+
+        const onUp = () => {
+            if (isDragging) {
+                isDragging = false;
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+            }
+        };
+
+        const onDown = (e) => {
+            isDragging = true;
+            startX = e.touches ? e.touches[0].clientX : e.clientX;
+            startY = e.touches ? e.touches[0].clientY : e.clientY;
+            initialX = currentX;
+            initialY = currentY;
+            window.addEventListener('mousemove', onMove, { passive: false });
+            window.addEventListener('mouseup', onUp);
+        };
+
+        container.onmousedown = onDown;
+
+        return () => ({
+            sourceX: Math.abs(currentX / uiScale / fitScale),
+            sourceY: Math.abs(currentY / uiScale / fitScale),
+            sourceW: targetW / fitScale,
+            sourceH: targetH / fitScale
+        });
+    }
+
+    resizerBtn.addEventListener('click', async () => {
+        if (!window.showDirectoryPicker) {
+            alert('File System Access API를 지원하지 않는 브라우저입니다.');
+            return;
+        }
+
+        let baseDirHandle;
+        try { baseDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
+
+        const dateFolderName = getTodayDateString();
+        let dateDirHandle = await baseDirHandle.getDirectoryHandle(dateFolderName, { create: true });
+
+        const targetWidth = parseInt(document.getElementById('r-target-width').value) || 1000;
+        const quality = parseFloat(document.getElementById('r-img-quality').value);
+
+        resizerBtn.disabled = true;
+        statusList.style.display = 'block';
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dateFolderName}] 스마트 리사이즈 저장 중...</div>`;
+
+        for (const data of loadedResizerImages) {
+            try {
+                const mainImg = await processResizeAutoHeight(data.file, data.img, targetWidth, quality);
+                await saveFileSafe(dateDirHandle, mainImg.name, mainImg.blob);
+
+                const thumb720 = await processCustomCrop(data.file, data.img, 720, 420, data.crop720, quality, '720x420_');
+                await saveFileSafe(dateDirHandle, thumb720.name, thumb720.blob);
+
+                const thumb500 = await processCustomCrop(data.file, data.img, 500, 500, data.crop500, quality, '500x500_');
+                await saveFileSafe(dateDirHandle, thumb500.name, thumb500.blob);
+
+                appendStatus(`💾 ${data.file.name}`, 'JPG 3종 저장 완료');
+            } catch (err) { console.error(err); }
+        }
+
+        resizerBtn.disabled = false;
+        alert('모든 사진 변환이 완료되었습니다!');
+    });
+
+    // ================= [TAB 3] 분할 콜라주 =================
+    ['c-width', 'c-height', 'c-border-w', 'c-border-color'].forEach(id => {
+        document.getElementById(id).addEventListener('input', renderCollageCanvas);
+    });
+
+    function updateCollageUI() {
+        collageItemList.innerHTML = '';
+        collageImages.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.draggable = true;
+            card.innerHTML = `
+                <span style="color:#adb5bd; cursor:grab;">☰</span>
+                <img src="${item.imgObj.src}" class="item-thumb">
+                <div class="item-info">
+                    <div class="item-name">${index + 1}번: ${item.file.name}</div>
+                    <div style="font-size:11px; color:#868e96;">배율: ${(item.zoom * 100).toFixed(0)}%</div>
+                </div>
+                <button class="btn-small btn-danger" onclick="removeCollageItem(${index})">삭제</button>
+            `;
+
+            card.addEventListener('dragstart', () => { draggedCardIndex = index; card.classList.add('dragging'); });
+            card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedCardIndex = null; });
+            card.addEventListener('dragover', (e) => e.preventDefault());
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedCardIndex !== null && draggedCardIndex !== index) {
+                    const movedItem = collageImages.splice(draggedCardIndex, 1)[0];
+                    collageImages.splice(index, 0, movedItem);
+                    updateCollageUI();
+                    renderCollageCanvas();
+                }
+            });
+            collageItemList.appendChild(card);
+        });
+        collageDownloadBtn.disabled = collageImages.length === 0;
+    }
+
+    window.removeCollageItem = function(index) {
+        collageImages.splice(index, 1);
+        updateCollageUI();
+        renderCollageCanvas();
+    };
+
+    function renderCollageCanvas() {
+        const cWidth = parseInt(document.getElementById('c-width').value) || 1000;
+        const cHeight = parseInt(document.getElementById('c-height').value) || 588;
+        const borderW = parseInt(document.getElementById('c-border-w').value) || 0;
+        const borderColor = document.getElementById('c-border-color').value;
+
+        collageCanvas.width = cWidth;
+        collageCanvas.height = cHeight;
+        collageCtx.clearRect(0, 0, cWidth, cHeight);
+
+        const count = collageImages.length;
+        if (count === 0) {
+            collageCtx.fillStyle = '#222';
+            collageCtx.fillRect(0, 0, cWidth, cHeight);
+            collageCtx.fillStyle = '#888';
+            collageCtx.font = '16px sans-serif';
+            collageCtx.textAlign = 'center';
+            collageCtx.fillText('이미지를 업로드하세요', cWidth / 2, cHeight / 2);
+            return;
+        }
+
+        const totalBorderSpace = borderW * (count - 1);
+        const slotWidth = (cWidth - totalBorderSpace) / count;
+
+        collageImages.forEach((item, i) => {
+            const slotX = i * (slotWidth + borderW);
+            collageCtx.save();
+            collageCtx.beginPath();
+            collageCtx.rect(slotX, 0, slotWidth, cHeight);
+            collageCtx.clip();
+
+            const img = item.imgObj;
+            const baseScale = Math.max(slotWidth / img.width, cHeight / img.height);
+            const scale = baseScale * item.zoom;
+            const drawW = img.width * scale;
+            const drawH = img.height * scale;
+
+            const finalX = slotX + (slotWidth - drawW) / 2 + item.offsetX;
+            const finalY = (cHeight - drawH) / 2 + item.offsetY;
+
+            collageCtx.drawImage(img, finalX, finalY, drawW, drawH);
+            collageCtx.restore();
+
+            if (i < count - 1 && borderW > 0) {
+                collageCtx.fillStyle = borderColor;
+                collageCtx.fillRect(slotX + slotWidth, 0, borderW, cHeight);
+            }
+        });
+    }
+
+    function getSlotIndexAt(x) {
+        const borderW = parseInt(document.getElementById('c-border-w').value) || 0;
+        const count = collageImages.length;
+        if (count === 0) return -1;
+        const rect = collageCanvas.getBoundingClientRect();
+        const canvasX = x * (collageCanvas.width / rect.width);
+        const slotWidth = (collageCanvas.width - (borderW * (count - 1))) / count;
+
+        for (let i = 0; i < count; i++) {
+            const slotX = i * (slotWidth + borderW);
+            if (canvasX >= slotX && canvasX <= slotX + slotWidth) return i;
+        }
+        return -1;
+    }
+
+    collageCanvas.addEventListener('mousedown', (e) => {
+        const rect = collageCanvas.getBoundingClientRect();
+        activeDragIndex = getSlotIndexAt(e.clientX - rect.left);
+        if (activeDragIndex !== -1) {
+            startX = e.clientX; startY = e.clientY;
+            initialOffsetX = collageImages[activeDragIndex].offsetX;
+            initialOffsetY = collageImages[activeDragIndex].offsetY;
+            collageCanvas.style.cursor = 'grabbing';
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (activeDragIndex === -1) return;
+        const rect = collageCanvas.getBoundingClientRect();
+        const dx = (e.clientX - startX) * (collageCanvas.width / rect.width);
+        const dy = (e.clientY - startY) * (collageCanvas.height / rect.height);
+        collageImages[activeDragIndex].offsetX = initialOffsetX + dx;
+        collageImages[activeDragIndex].offsetY = initialOffsetY + dy;
+        renderCollageCanvas();
+    });
+
+    window.addEventListener('mouseup', () => { activeDragIndex = -1; collageCanvas.style.cursor = 'default'; });
+
+    collageCanvas.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            const rect = collageCanvas.getBoundingClientRect();
+            const idx = getSlotIndexAt(e.clientX - rect.left);
+            if (idx !== -1) {
+                const zoomFactor = e.deltaY < 0 ? 1.05 : 0.95;
+                collageImages[idx].zoom = Math.max(0.2, Math.min(collageImages[idx].zoom * zoomFactor, 5.0));
+                updateCollageUI();
+                renderCollageCanvas();
+            }
+        }
+    }, { passive: false });
+
+    collageDownloadBtn.addEventListener('click', () => {
         const link = document.createElement('a');
-        link.download = `${getBaseName(psFileName)}_${style}_v4.jpg`;
-        link.href = psCanvas.toDataURL('image/jpeg', 0.92); // 고품질 JPG
+        link.download = `kinocine_collage_${Date.now()}.jpg`;
+        link.href = collageCanvas.toDataURL('image/jpeg', 0.92);
         link.click();
     });
 
-    // ================= 유틸리티 함수 =================
+    // ================= [TAB 4] PNG로 변환 전용 로직 =================
+    function renderPngPreviews() {
+        pngPreviewContainer.innerHTML = '';
+        pngLoadedImages.forEach((item, idx) => {
+            const card = document.createElement('div');
+            card.className = 'preview-card';
+
+            const previewImg = document.createElement('img');
+            previewImg.src = item.imgObj.src;
+
+            const baseName = getBaseName(item.file.name);
+            const label = document.createElement('div');
+            label.className = 'preview-label';
+            label.textContent = `${baseName}.png`;
+
+            card.appendChild(previewImg);
+            card.appendChild(label);
+            pngPreviewContainer.appendChild(card);
+        });
+    }
+
+    // PNG 폴더 저장
+    pngFolderSaveBtn.addEventListener('click', async () => {
+        if (!pngLoadedImages.length || !window.showDirectoryPicker) {
+            alert('변환할 사진이 없거나 지원되지 않는 브라우저입니다.');
+            return;
+        }
+
+        let baseDirHandle;
+        try { baseDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
+
+        const dateFolderName = getTodayDateString();
+        let dateDirHandle = await baseDirHandle.getDirectoryHandle(dateFolderName, { create: true });
+
+        pngFolderSaveBtn.disabled = true;
+        statusList.style.display = 'block';
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dateFolderName}] PNG 무손실 변환 저장 중...</div>`;
+
+        for (const item of pngLoadedImages) {
+            const img = item.imgObj;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            const outFileName = `${getBaseName(item.file.name)}.png`;
+
+            await saveFileSafe(dateDirHandle, outFileName, blob);
+            appendStatus(`💎 ${outFileName}`, 'PNG 저장 완료');
+        }
+
+        pngFolderSaveBtn.disabled = false;
+        alert('모든 사진이 PNG로 성공적으로 저장되었습니다!');
+    });
+
+    // PNG 개별 브라우저 다운로드
+    pngDownloadAllBtn.addEventListener('click', () => {
+        if (!pngLoadedImages.length) return;
+
+        pngLoadedImages.forEach(item => {
+            const img = item.imgObj;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const link = document.createElement('a');
+            link.download = `${getBaseName(item.file.name)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    });
+
+    // ================= 유틸리티 함수 및 안전 저장 =================
+    function getTodayDateString() {
+        const today = new Date();
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
+
     function getBaseName(originalName) {
         const lastDot = originalName.lastIndexOf('.');
         return lastDot === -1 ? originalName : originalName.substring(0, lastDot);
     }
-    // ... (나머지 유틸리티 함수 및 로직 생략, 기존 코드와 동일) ...
 
+    async function saveFileSafe(dirHandle, filename, blob) {
+        let finalName = filename;
+        let count = 1;
+        const lastDot = filename.lastIndexOf('.');
+        const namePart = lastDot === -1 ? filename : filename.substring(0, lastDot);
+        const extPart = lastDot === -1 ? '' : filename.substring(lastDot);
+
+        while (true) {
+            try {
+                await dirHandle.getFileHandle(finalName, { create: false });
+                finalName = `${namePart}(${count})${extPart}`;
+                count++;
+            } catch (e) {
+                break;
+            }
+        }
+
+        const fileHandle = await dirHandle.getFileHandle(finalName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+    }
+
+    function appendStatus(title, message) {
+        const item = document.createElement('div');
+        item.className = 'status-item';
+        item.innerHTML = `<span>${title}</span><span style="color:#2b8a3e; font-weight:bold;">${message}</span>`;
+        statusList.appendChild(item);
+    }
+
+    function processResizeAutoHeight(file, img, targetWidth, quality) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            let w = targetWidth, h = img.height * (targetWidth / img.width);
+            if (img.width <= targetWidth) { w = img.width; h = img.height; }
+            canvas.width = w; canvas.height = h;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+            const outName = `${targetWidth}w_${getBaseName(file.name)}.jpg`;
+            canvas.toBlob((blob) => resolve({ name: outName, blob }), 'image/jpeg', quality);
+        });
+    }
+
+    function processCustomCrop(file, img, targetW, targetH, cropData, quality, prefix) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = targetW; canvas.height = targetH;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, cropData.sourceX, cropData.sourceY, cropData.sourceW, cropData.sourceH, 0, 0, targetW, targetH);
+            const outName = `${prefix}${getBaseName(file.name)}.jpg`;
+            canvas.toBlob((blob) => resolve({ name: outName, blob }), 'image/jpeg', quality);
+        });
+    }
 </script>
 
 </body>
