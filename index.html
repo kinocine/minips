@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kinocine Mini Photoshop v3.9</title>
+    <title>Kinocine Mini Photoshop v4.0</title>
     <!-- HEIC/HEIF 포맷 지원 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <style>
@@ -73,7 +73,7 @@
         }
         .tab-btn {
             flex: 1;
-            min-width: 120px;
+            min-width: 110px;
             padding: 12px 6px;
             background: #f1f3f5;
             border: none;
@@ -266,12 +266,35 @@
         .crop-container img { position: absolute; pointer-events: none; user-select: none; }
         .crop-720 { aspect-ratio: 720 / 420; width: 100%; max-width: 720px; }
         .crop-500 { aspect-ratio: 500 / 500; width: 100%; max-width: 500px; }
+
+        /* TAB [자르기] 전용 스타일 */
+        #interactive-crop-canvas {
+            cursor: crosshair;
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        .crop-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .crop-info-pill {
+            background: #212529;
+            color: #f8f9fa;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Kinocine Mini Photoshop v3.9</h1>
+    <h1>Kinocine Mini Photoshop v4.0</h1>
 
     <!-- 폴더 상태 바 -->
     <div class="dir-bar">
@@ -279,9 +302,10 @@
         <button id="btn-change-dir" type="button">저장 폴더 변경</button>
     </div>
 
-    <!-- 탭 메뉴 -->
+    <!-- 탭 메뉴 (두 번째에 [자르기] 탭 추가) -->
     <div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('resizer')">⚡ 리사이즈 & 크롭</button>
+        <button class="tab-btn" onclick="switchTab('free-crop')">✂️ 자르기</button>
         <button class="tab-btn" onclick="switchTab('slice')">🎞️ 슬라이드 분할</button>
         <button class="tab-btn" onclick="switchTab('block-slice')">🧩 덩어리 자르기</button>
         <button class="tab-btn" onclick="switchTab('collage')">🎬 콜라주 메이커</button>
@@ -316,7 +340,23 @@
         <button id="resizer-process-btn" class="btn" disabled>⚡ 변환 및 minips 폴더 바로 저장</button>
     </div>
 
-    <!-- TAB 2: 슬라이드 분할 -->
+    <!-- TAB 2 (NEW): 포토샵식 자유 자르기 -->
+    <div id="tab-free-crop" class="tab-content">
+        <div class="tip-box">
+            ✂️ <strong>포토샵 자르기 모드:</strong> 마우스로 원하는 영역을 드래그하여 선택하세요. (모서리/테두리를 끌어 크기 조절 가능)<br>
+            저장 시 <strong>전체 원본 1000px</strong>(1장)과 <strong>자른 영역 720px</strong>(1장)이 <code>minips</code> 폴더에 자동 저장됩니다.
+        </div>
+        <div class="crop-toolbar">
+            <span class="crop-info-pill" id="freecrop-info">선택 영역: 없음</span>
+            <button type="button" class="btn-small" style="background:#495057;" onclick="resetFreeCropSelection()">영역 초기화</button>
+        </div>
+        <div class="canvas-container">
+            <canvas id="interactive-crop-canvas"></canvas>
+        </div>
+        <button id="freecrop-save-btn" class="btn" disabled>✂️ 전체 1000px + 자른것 720px minips 저장</button>
+    </div>
+
+    <!-- TAB 3: 슬라이드 분할 -->
     <div id="tab-slice" class="tab-content">
         <div class="tip-box">
             💡 <strong>사용 방법:</strong> 분할 컷 및 통짜 원본이 minips 폴더에 일괄 저장됩니다.
@@ -343,7 +383,7 @@
         <button id="slice-process-btn" class="btn" disabled>🎞️ 통짜 + 분할 이미지 minips 폴더 바로 저장</button>
     </div>
 
-    <!-- TAB 3: 덩어리 자르기 -->
+    <!-- TAB 4: 덩어리 자르기 -->
     <div id="tab-block-slice" class="tab-content">
         <div class="tip-box">
             💡 <strong>사용 방법:</strong> 상단 덩어리와 하단 덩어리를 잘라 minips 폴더에 저장합니다.
@@ -367,7 +407,7 @@
         <button id="block-process-btn" class="btn" disabled>🧩 덩어리 minips 폴더 바로 저장</button>
     </div>
 
-    <!-- TAB 4: 콜라주 메이커 -->
+    <!-- TAB 5: 콜라주 메이커 -->
     <div id="tab-collage" class="tab-content">
         <div class="tip-box">
             💡 <strong>사용 방법:</strong> 드래그 위치조정, <strong>Ctrl + 휠</strong>로 확대/축소 후 바로 저장합니다.
@@ -397,7 +437,7 @@
         <button id="collage-download-btn" class="btn" disabled>🎬 콜라주 minips 폴더 바로 저장</button>
     </div>
 
-    <!-- TAB 5: PNG로 변환 -->
+    <!-- TAB 6: PNG로 변환 -->
     <div id="tab-png-convert" class="tab-content">
         <div class="tip-box">
             💎 <strong>사용 방법:</strong> 화질 손실 없이 무손실 PNG로 minips 폴더에 일괄 저장합니다.
@@ -410,7 +450,7 @@
     <div id="status-list" style="display: none;"></div>
 </div>
 
-<!-- 수동 멀티크롭 모달 -->
+<!-- 수동 멀티크롭 모달 (리사이즈 & 크롭용) -->
 <div class="modal-overlay" id="editor-modal">
     <div class="modal-content">
         <div style="text-align:center; margin-bottom:15px;">
@@ -451,19 +491,31 @@
     let currentEditIndex = 0;
     let getCropData720 = null, getCropData500 = null;
 
-    // TAB 2
+    // TAB 2 (자르기)
+    const freeCropCanvas = document.getElementById('interactive-crop-canvas');
+    const freeCropCtx = freeCropCanvas.getContext('2d');
+    const freeCropSaveBtn = document.getElementById('freecrop-save-btn');
+    const freeCropInfo = document.getElementById('freecrop-info');
+    let freeCropCurrentItem = null;
+    let cropRect = null; // { x, y, w, h } 원본 이미지 픽셀 좌표 기준
+    let isDrawingCrop = false, isMovingCrop = false, isResizingCrop = false;
+    let dragStartPos = { x: 0, y: 0 };
+    let cropRectStart = null;
+    let activeHandle = null;
+
+    // TAB 3
     const sliceProcessBtn = document.getElementById('slice-process-btn');
     const slicePartsSelect = document.getElementById('slice-parts-select');
     const slicePreviewContainer = document.getElementById('slice-preview-container');
     let sliceLoadedImages = [];
 
-    // TAB 3
+    // TAB 4
     const blockModeSelect = document.getElementById('block-mode-select');
     const blockPreviewContainer = document.getElementById('block-preview-container');
     const blockProcessBtn = document.getElementById('block-process-btn');
     let blockLoadedImages = [];
 
-    // TAB 4
+    // TAB 5
     const collageCanvas = document.getElementById('collage-canvas');
     const collageCtx = collageCanvas.getContext('2d');
     const collageItemList = document.getElementById('collage-item-list');
@@ -471,7 +523,7 @@
     let collageImages = []; 
     let activeDragIndex = -1, startX = 0, startY = 0, initialOffsetX = 0, initialOffsetY = 0, draggedCardIndex = null;
 
-    // TAB 5
+    // TAB 6
     const pngPreviewContainer = document.getElementById('png-preview-container');
     const pngFolderSaveBtn = document.getElementById('png-folder-save-btn');
     let pngLoadedImages = [];
@@ -545,7 +597,6 @@
         return savedDirectoryHandle;
     }
 
-    // 날짜+시간 타임스탬프 (YYYYMMDDHHMMSS)
     function getTimeStampString() {
         const d = new Date();
         const YYYY = d.getFullYear();
@@ -563,25 +614,25 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
+        const tabs = ['resizer', 'free-crop', 'slice', 'block-slice', 'collage', 'png-convert'];
+        const targetIdx = tabs.indexOf(tabName);
+        if (targetIdx !== -1) {
+            document.querySelectorAll('.tab-btn')[targetIdx].classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
         if (tabName === 'resizer') {
-            document.querySelectorAll('.tab-btn')[0].classList.add('active');
-            document.getElementById('tab-resizer').classList.add('active');
             dropzoneText.textContent = "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
+        } else if (tabName === 'free-crop') {
+            dropzoneText.textContent = "✂️ 포토샵 스타일로 직접 자를 사진을 1장 드래그앤드롭 하세요";
+            if (freeCropCurrentItem) drawFreeCropCanvas();
         } else if (tabName === 'slice') {
-            document.querySelectorAll('.tab-btn')[1].classList.add('active');
-            document.getElementById('tab-slice').classList.add('active');
             dropzoneText.textContent = "📸 세로로 긴 분할용 이미지를 드래그앤드롭 하세요 (통짜+조각 저장)";
         } else if (tabName === 'block-slice') {
-            document.querySelectorAll('.tab-btn')[2].classList.add('active');
-            document.getElementById('tab-block-slice').classList.add('active');
             dropzoneText.textContent = "📸 3단/4단 모자이크 스틸컷 이미지를 드래그앤드롭 하세요";
         } else if (tabName === 'collage') {
-            document.querySelectorAll('.tab-btn')[3].classList.add('active');
-            document.getElementById('tab-collage').classList.add('active');
             dropzoneText.textContent = "📸 콜라주 합성할 사진들을 드래그앤드롭 하세요";
         } else if (tabName === 'png-convert') {
-            document.querySelectorAll('.tab-btn')[4].classList.add('active');
-            document.getElementById('tab-png-convert').classList.add('active');
             dropzoneText.textContent = "💎 PNG로 포맷 변경할 최종 작업 사진들을 드래그앤드롭 하세요";
         }
     }
@@ -616,6 +667,21 @@
             if (loadedResizerImages.length > 0) {
                 currentEditIndex = 0;
                 openCropEditor();
+            }
+
+        } else if (activeTab === 'free-crop') {
+            // [자르기] 탭: 단일 이미지 포토샵 자르기
+            dropzoneText.innerHTML = `⏳ 자르기용 이미지 준비 중...`;
+            const file = validFiles[0];
+            try {
+                const imgObj = await loadImage(file);
+                freeCropCurrentItem = { file, imgObj };
+                cropRect = null;
+                initFreeCropCanvas();
+                dropzoneText.innerHTML = `✂️ <strong>${file.name}</strong> 준비 완료! 캔버스에서 자를 영역을 드래그하세요.`;
+                freeCropSaveBtn.disabled = false;
+            } catch (err) {
+                console.error("자르기 이미지 로드 실패:", err);
             }
 
         } else if (activeTab === 'slice') {
@@ -810,7 +876,6 @@
         });
     }
 
-    // ⚡ 리사이즈 & 크롭 저장 ({ts}_1000, {ts}_720, {ts}_500)
     resizerBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
         if (!dirHandle) return;
@@ -839,7 +904,7 @@
                 await saveFileDirect(dirHandle, thumb500.name, thumb500.blob);
 
                 appendStatus(`💾 ${data.file.name}`, `_${targetWidth}, _720, _500 저장 완료`);
-                await new Promise(r => setTimeout(r, 1000)); // 타임스탬프 중복 방지 지연
+                await new Promise(r => setTimeout(r, 1000));
             } catch (err) { console.error(err); }
         }
 
@@ -847,7 +912,325 @@
         alert('모든 사진이 minips 폴더에 성공적으로 저장되었습니다!');
     });
 
-    // ================= [TAB 2] 슬라이드 분할 =================
+    // ================= [TAB 2] 포토샵식 자유 자르기 =================
+    function initFreeCropCanvas() {
+        if (!freeCropCurrentItem) return;
+        const img = freeCropCurrentItem.imgObj;
+        
+        // 캔버스 디스플레이 크기 설정 (화면 너비에 맞게)
+        const containerWidth = freeCropCanvas.parentElement.clientWidth || 930;
+        const displayWidth = Math.min(img.width, containerWidth);
+        const displayHeight = img.height * (displayWidth / img.width);
+
+        freeCropCanvas.width = displayWidth;
+        freeCropCanvas.height = displayHeight;
+
+        // 기본 크롭 영역: 정중앙 60% 영역 자동 초기화
+        const initW = img.width * 0.7;
+        const initH = img.height * 0.7;
+        cropRect = {
+            x: (img.width - initW) / 2,
+            y: (img.height - initH) / 2,
+            w: initW,
+            h: initH
+        };
+
+        drawFreeCropCanvas();
+        updateFreeCropInfo();
+    }
+
+    function resetFreeCropSelection() {
+        if (!freeCropCurrentItem) return;
+        cropRect = null;
+        drawFreeCropCanvas();
+        updateFreeCropInfo();
+    }
+
+    function updateFreeCropInfo() {
+        if (!cropRect || !freeCropCurrentItem) {
+            freeCropInfo.textContent = '선택 영역: 없음 (마우스 드래그로 영역 생성)';
+            return;
+        }
+        const w = Math.round(cropRect.w);
+        const h = Math.round(cropRect.h);
+        freeCropInfo.innerHTML = `선택 영역: <strong>${w} × ${h} px</strong> ➡ 저장 시 <strong>720px</strong>로 비례 조정`;
+    }
+
+    function getCanvasScale() {
+        if (!freeCropCurrentItem) return 1;
+        return freeCropCanvas.width / freeCropCurrentItem.imgObj.width;
+    }
+
+    function drawFreeCropCanvas() {
+        if (!freeCropCurrentItem) return;
+        const img = freeCropCurrentItem.imgObj;
+        const scale = getCanvasScale();
+
+        freeCropCtx.clearRect(0, 0, freeCropCanvas.width, freeCropCanvas.height);
+        freeCropCtx.drawImage(img, 0, 0, freeCropCanvas.width, freeCropCanvas.height);
+
+        if (!cropRect) return;
+
+        const rx = cropRect.x * scale;
+        const ry = cropRect.y * scale;
+        const rw = cropRect.w * scale;
+        const rh = cropRect.h * scale;
+
+        // 어두운 반투명 딤(Dim) 처리
+        freeCropCtx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        // 상
+        freeCropCtx.fillRect(0, 0, freeCropCanvas.width, ry);
+        // 하
+        freeCropCtx.fillRect(0, ry + rh, freeCropCanvas.width, freeCropCanvas.height - (ry + rh));
+        // 좌
+        freeCropCtx.fillRect(0, ry, rx, rh);
+        // 우
+        freeCropCtx.fillRect(rx + rw, ry, freeCropCanvas.width - (rx + rw), rh);
+
+        // 포토샵 스타일 선택 박스 테두리
+        freeCropCtx.strokeStyle = '#ffffff';
+        freeCropCtx.lineWidth = 1.5;
+        freeCropCtx.strokeRect(rx, ry, rw, rh);
+
+        // 3등분 그리드 안내선
+        freeCropCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        freeCropCtx.lineWidth = 1;
+        freeCropCtx.beginPath();
+        freeCropCtx.moveTo(rx + rw / 3, ry);
+        freeCropCtx.lineTo(rx + rw / 3, ry + rh);
+        freeCropCtx.moveTo(rx + (rw * 2) / 3, ry);
+        freeCropCtx.lineTo(rx + (rw * 2) / 3, ry + rh);
+        freeCropCtx.moveTo(rx, ry + rh / 3);
+        freeCropCtx.lineTo(rx + rw, ry + rh / 3);
+        freeCropCtx.moveTo(rx, ry + (rh * 2) / 3);
+        freeCropCtx.lineTo(rx + rw, ry + (rh * 2) / 3);
+        freeCropCtx.stroke();
+
+        // 8개 조절 핸들 그리기
+        const handles = getCropHandles(rx, ry, rw, rh);
+        freeCropCtx.fillStyle = '#ffffff';
+        freeCropCtx.strokeStyle = '#000000';
+        freeCropCtx.lineWidth = 1;
+
+        for (const h of Object.values(handles)) {
+            freeCropCtx.fillRect(h.x - 4, h.y - 4, 8, 8);
+            freeCropCtx.strokeRect(h.x - 4, h.y - 4, 8, 8);
+        }
+    }
+
+    function getCropHandles(rx, ry, rw, rh) {
+        return {
+            tl: { x: rx, y: ry, cursor: 'nwse-resize' },
+            tr: { x: rx + rw, y: ry, cursor: 'nesw-resize' },
+            bl: { x: rx, y: ry + rh, cursor: 'nesw-resize' },
+            br: { x: rx + rw, y: ry + rh, cursor: 'nwse-resize' },
+            t:  { x: rx + rw / 2, y: ry, cursor: 'ns-resize' },
+            b:  { x: rx + rw / 2, y: ry + rh, cursor: 'ns-resize' },
+            l:  { x: rx, y: ry + rh / 2, cursor: 'ew-resize' },
+            r:  { x: rx + rw, y: ry + rh / 2, cursor: 'ew-resize' }
+        };
+    }
+
+    function getHandleAtPos(mouseCanvasX, mouseCanvasY) {
+        if (!cropRect) return null;
+        const scale = getCanvasScale();
+        const rx = cropRect.x * scale;
+        const ry = cropRect.y * scale;
+        const rw = cropRect.w * scale;
+        const rh = cropRect.h * scale;
+        const handles = getCropHandles(rx, ry, rw, rh);
+
+        for (const [key, h] of Object.entries(handles)) {
+            if (Math.hypot(mouseCanvasX - h.x, mouseCanvasY - h.y) <= 8) {
+                return { key, cursor: h.cursor };
+            }
+        }
+        return null;
+    }
+
+    function isInsideCropRect(mouseCanvasX, mouseCanvasY) {
+        if (!cropRect) return false;
+        const scale = getCanvasScale();
+        const rx = cropRect.x * scale;
+        const ry = cropRect.y * scale;
+        const rw = cropRect.w * scale;
+        const rh = cropRect.h * scale;
+        return (mouseCanvasX >= rx && mouseCanvasX <= rx + rw && mouseCanvasY >= ry && mouseCanvasY <= ry + rh);
+    }
+
+    freeCropCanvas.addEventListener('mousedown', (e) => {
+        if (!freeCropCurrentItem) return;
+        const rect = freeCropCanvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (freeCropCanvas.width / rect.width);
+        const my = (e.clientY - rect.top) * (freeCropCanvas.height / rect.height);
+        const scale = getCanvasScale();
+
+        dragStartPos = { x: mx / scale, y: my / scale };
+
+        const handle = getHandleAtPos(mx, my);
+        if (handle) {
+            isResizingCrop = true;
+            activeHandle = handle.key;
+            cropRectStart = { ...cropRect };
+        } else if (isInsideCropRect(mx, my)) {
+            isMovingCrop = true;
+            cropRectStart = { ...cropRect };
+        } else {
+            // 새로 영역 그리기 시작
+            isDrawingCrop = true;
+            cropRect = { x: dragStartPos.x, y: dragStartPos.y, w: 0, h: 0 };
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!freeCropCurrentItem || activeTab !== 'free-crop') return;
+        const rect = freeCropCanvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (freeCropCanvas.width / rect.width);
+        const my = (e.clientY - rect.top) * (freeCropCanvas.height / rect.height);
+        const scale = getCanvasScale();
+        const curImgX = mx / scale;
+        const curImgY = my / scale;
+
+        // 커서 모양 변경
+        if (!isDrawingCrop && !isMovingCrop && !isResizingCrop) {
+            const h = getHandleAtPos(mx, my);
+            if (h) {
+                freeCropCanvas.style.cursor = h.cursor;
+            } else if (isInsideCropRect(mx, my)) {
+                freeCropCanvas.style.cursor = 'move';
+            } else {
+                freeCropCanvas.style.cursor = 'crosshair';
+            }
+            return;
+        }
+
+        const imgW = freeCropCurrentItem.imgObj.width;
+        const imgH = freeCropCurrentItem.imgObj.height;
+
+        if (isDrawingCrop) {
+            const minX = Math.max(0, Math.min(dragStartPos.x, curImgX));
+            const minY = Math.max(0, Math.min(dragStartPos.y, curImgY));
+            const maxX = Math.min(imgW, Math.max(dragStartPos.x, curImgX));
+            const maxY = Math.min(imgH, Math.max(dragStartPos.y, curImgY));
+
+            cropRect = {
+                x: minX,
+                y: minY,
+                w: maxX - minX,
+                h: maxY - minY
+            };
+        } else if (isMovingCrop && cropRectStart) {
+            const dx = curImgX - dragStartPos.x;
+            const dy = curImgY - dragStartPos.y;
+            let nx = cropRectStart.x + dx;
+            let ny = cropRectStart.y + dy;
+
+            nx = Math.max(0, Math.min(nx, imgW - cropRectStart.w));
+            ny = Math.max(0, Math.min(ny, imgH - cropRectStart.h));
+
+            cropRect.x = nx;
+            cropRect.y = ny;
+        } else if (isResizingCrop && cropRectStart) {
+            const dx = curImgX - dragStartPos.x;
+            const dy = curImgY - dragStartPos.y;
+
+            let { x, y, w, h } = cropRectStart;
+
+            if (activeHandle.includes('r')) w += dx;
+            if (activeHandle.includes('b')) h += dy;
+            if (activeHandle.includes('l')) { x += dx; w -= dx; }
+            if (activeHandle.includes('t')) { y += dy; h -= dy; }
+
+            if (w < 20) w = 20;
+            if (h < 20) h = 20;
+
+            x = Math.max(0, Math.min(x, imgW - w));
+            y = Math.max(0, Math.min(y, imgH - h));
+            w = Math.min(w, imgW - x);
+            h = Math.min(h, imgH - y);
+
+            cropRect = { x, y, w, h };
+        }
+
+        drawFreeCropCanvas();
+        updateFreeCropInfo();
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDrawingCrop || isMovingCrop || isResizingCrop) {
+            isDrawingCrop = false;
+            isMovingCrop = false;
+            isResizingCrop = false;
+            activeHandle = null;
+
+            if (cropRect && (cropRect.w < 10 || cropRect.h < 10)) {
+                cropRect = null;
+                drawFreeCropCanvas();
+                updateFreeCropInfo();
+            }
+        }
+    });
+
+    // ✂️ 자르기 저장 실행: 전체 1000px + 자른것 720px
+    freeCropSaveBtn.addEventListener('click', async () => {
+        if (!freeCropCurrentItem) return;
+        const dirHandle = await getReadyDirHandle();
+        if (!dirHandle) return;
+
+        freeCropSaveBtn.disabled = true;
+        statusList.style.display = 'block';
+        statusList.innerHTML = `<div style="font-weight:bold;">[minips] 포토샵 자르기 처리 및 저장 중...</div>`;
+
+        try {
+            const ts = getTimeStampString();
+            const img = freeCropCurrentItem.imgObj;
+
+            // 1. 전체 이미지 가로 1000px 비례 리사이즈 저장
+            const fullW = 1000;
+            const fullH = img.height * (fullW / img.width);
+            const fullCanvas = document.createElement('canvas');
+            fullCanvas.width = fullW;
+            fullCanvas.height = fullH;
+            const fullCtx = fullCanvas.getContext('2d');
+            fullCtx.imageSmoothingQuality = 'high';
+            fullCtx.drawImage(img, 0, 0, fullW, fullH);
+
+            const fullBlob = await new Promise(r => fullCanvas.toBlob(r, 'image/jpeg', 0.92));
+            const fullFileName = `${ts}_1000.jpg`;
+            await saveFileDirect(dirHandle, fullFileName, fullBlob);
+            appendStatus(`✂️ 전체 이미지 (1000px)`, `${fullFileName} 저장 완료`);
+
+            // 2. 자른 영역 가로 720px 비례 리사이즈 저장
+            let cropSrc = cropRect;
+            if (!cropSrc) {
+                // 영역 지정이 안 된 경우 중앙 720p 기준으로 기본 자르기
+                cropSrc = { x: 0, y: 0, w: img.width, h: img.height };
+            }
+
+            const cropW = 720;
+            const cropH = cropSrc.h * (cropW / cropSrc.w);
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = cropW;
+            cropCanvas.height = cropH;
+            const cropCtx = cropCanvas.getContext('2d');
+            cropCtx.imageSmoothingQuality = 'high';
+            cropCtx.drawImage(img, cropSrc.x, cropSrc.y, cropSrc.w, cropSrc.h, 0, 0, cropW, cropH);
+
+            const cropBlob = await new Promise(r => cropCanvas.toBlob(r, 'image/jpeg', 0.92));
+            const cropFileName = `${ts}_720_crop.jpg`;
+            await saveFileDirect(dirHandle, cropFileName, cropBlob);
+            appendStatus(`✂️ 자른 영역 (720px)`, `${cropFileName} 저장 완료`);
+
+            alert(`저장 완료!\n- 전체: ${fullFileName}\n- 자른 영역: ${cropFileName}`);
+        } catch (err) {
+            console.error(err);
+            alert('저장 중 오류가 발생했습니다.');
+        } finally {
+            freeCropSaveBtn.disabled = false;
+        }
+    });
+
+    // ================= [TAB 3] 슬라이드 분할 =================
     slicePartsSelect.addEventListener('change', () => {
         if (sliceLoadedImages.length > 0) renderSlicePreviews();
     });
@@ -948,7 +1331,7 @@
         alert('모든 슬라이드가 minips 폴더에 저장되었습니다!');
     });
 
-    // ================= [TAB 3] 덩어리 자르기 =================
+    // ================= [TAB 4] 덩어리 자르기 =================
     blockModeSelect.addEventListener('change', () => {
         if (blockLoadedImages.length > 0) renderBlockPreviews();
     });
@@ -1050,7 +1433,7 @@
         alert('모든 덩어리가 minips 폴더에 저장되었습니다!');
     });
 
-    // ================= [TAB 4] 분할 콜라주 =================
+    // ================= [TAB 5] 분할 콜라주 =================
     ['c-width', 'c-height', 'c-border-w', 'c-border-color'].forEach(id => {
         document.getElementById(id).addEventListener('input', renderCollageCanvas);
     });
@@ -1196,7 +1579,6 @@
         }
     }, { passive: false });
 
-    // 콜라주 자동 저장 ({ts}_{cWidth}_collage.jpg)
     collageDownloadBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
         if (!dirHandle) return;
@@ -1210,7 +1592,7 @@
         alert(`${fileName} 이 minips 폴더에 저장되었습니다!`);
     });
 
-    // ================= [TAB 5] PNG로 변환 =================
+    // ================= [TAB 6] PNG로 변환 =================
     function renderPngPreviews() {
         pngPreviewContainer.innerHTML = '';
         pngLoadedImages.forEach((item) => {
