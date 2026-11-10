@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kinocine Mini Photoshop v4.0</title>
+    <title>Kinocine Mini Photoshop v4.1</title>
     <!-- HEIC/HEIF 포맷 지원 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <style>
@@ -42,28 +42,6 @@
             padding-bottom: 12px;
         }
 
-        .dir-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #e9ecef;
-            padding: 8px 14px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            font-size: 13px;
-        }
-        .dir-bar span { font-weight: 500; color: #495057; }
-        .dir-bar button {
-            background: #495057;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 4px 10px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .dir-bar button:hover { background: #212529; }
-        
         .tab-menu {
             display: flex;
             gap: 6px;
@@ -87,14 +65,6 @@
         }
         .tab-btn.active {
             background: var(--primary-color);
-            color: white;
-        }
-        .tab-btn.png-tab {
-            background: #e7f5ff;
-            color: #1c7ed6;
-        }
-        .tab-btn.png-tab.active {
-            background: #1c7ed6;
             color: white;
         }
 
@@ -163,8 +133,6 @@
         }
         .btn:hover { background-color: #b80710; }
         .btn:disabled { background-color: #dee2e6; color: #868e96; cursor: not-allowed; }
-        .btn-blue { background-color: #1c7ed6; }
-        .btn-blue:hover { background-color: #1864ab; }
 
         .canvas-container {
             position: relative;
@@ -202,8 +170,6 @@
         .item-name { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         .btn-small { padding: 5px 8px; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; color: white; }
-        .btn-danger { background: #e03131; }
-        .btn-danger:hover { background: #c92a2a; }
 
         .tip-box {
             background: #e7f5ff;
@@ -225,7 +191,21 @@
             padding: 15px;
             background: #fff;
         }
-        .status-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f3f5; font-size: 13px; }
+        .status-header {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .status-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 6px 0; 
+            border-bottom: 1px solid #f1f3f5; 
+            font-size: 13px; 
+        }
 
         .preview-grid {
             display: grid;
@@ -294,35 +274,25 @@
 <body>
 
 <div class="container">
-    <h1>Kinocine Mini Photoshop v4.0</h1>
+    <h1>Kinocine Mini Photoshop v4.1</h1>
 
-    <!-- 폴더 상태 바 -->
-    <div class="dir-bar">
-        <span id="target-dir-label">📁 고정 저장 경로: <strong>미지정 (최초 1회 D:\minips 지정 필요)</strong></span>
-        <button id="btn-change-dir" type="button">저장 폴더 변경</button>
-    </div>
-
-    <!-- 탭 메뉴 -->
+    <!-- 탭 메뉴 (PNG 탭 제거) -->
     <div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('resizer')">⚡ 리사이즈 & 크롭</button>
         <button class="tab-btn" onclick="switchTab('free-crop')">✂️ 자르기</button>
         <button class="tab-btn" onclick="switchTab('slice')">🎞️ 슬라이드 분할</button>
         <button class="tab-btn" onclick="switchTab('block-slice')">🧩 덩어리 자르기</button>
         <button class="tab-btn" onclick="switchTab('collage')">🎬 콜라주 메이커</button>
-        <button class="tab-btn png-tab" onclick="switchTab('png-convert')">💎 PNG로</button>
     </div>
 
     <!-- 공통 드롭존 -->
     <div class="dropzone" id="dropzone">
-        <p id="dropzone-text">📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요 (WebP, JPG, PNG, HEIC 등)</p>
+        <p id="dropzone-text">📸 작업할 사진들을 드래그앤드롭 하세요 (WebP, JPG, PNG, HEIC 등)</p>
         <input type="file" id="file-input" multiple accept="image/*,.heic,.heif,.webp,.avif" style="display: none;">
     </div>
 
     <!-- TAB 1: 스마트 리사이즈 & 크롭 -->
     <div id="tab-resizer" class="tab-content active">
-        <div class="tip-box">
-            💡 <strong>자동 저장 모드:</strong> 크롭 설정이 끝나면 D:\minips 폴더에 <code>1000px</code>, <code>720px</code>, <code>500px</code> 이미지가 자동 일괄 저장됩니다.
-        </div>
         <div class="controls">
             <div class="control-group">
                 <label>기본 이미지 가로 크기 (px)</label>
@@ -337,30 +307,27 @@
                 </select>
             </div>
         </div>
-        <button id="resizer-process-btn" class="btn" disabled>⚡ 변환 및 minips 폴더 바로 저장</button>
+        <button id="resizer-process-btn" class="btn" disabled>⚡ 변환 및 [다운로드] 폴더 일괄 저장</button>
     </div>
 
     <!-- TAB 2: 자유 자르기 -->
     <div id="tab-free-crop" class="tab-content">
         <div class="tip-box">
-            ✂️ <strong>포토샵 자르기 모드:</strong> 마우스로 원하는 영역을 드래그하여 선택하세요.<br>
-            저장 시 <strong>전체 원본 1000px</strong>(1장)과 <strong>자른 영역 720px</strong>(1장)이 <code>minips</code> 폴더에 자동 저장됩니다.
+            ✂️ <strong>포토샵 자르기 모드:</strong> 원하는 영역을 드래그하세요.<br>
+            저장 시 <strong>전체 원본 1000px(1장) + 크롭 1000px(1장) + 크롭 720px(1장)</strong> 총 3장이 [다운로드] 폴더에 저장됩니다.
         </div>
         <div class="crop-toolbar">
             <span class="crop-info-pill" id="freecrop-info">선택 영역: 없음</span>
-            <button type="button" class="btn-small" style="background:#495057;" onclick="resetFreeCropSelection()">영역 초기화</button>
+            <button type="button" class="btn-small" style="background:#495057; color:#fff;" onclick="resetFreeCropSelection()">영역 초기화</button>
         </div>
         <div class="canvas-container">
             <canvas id="interactive-crop-canvas"></canvas>
         </div>
-        <button id="freecrop-save-btn" class="btn" disabled>✂️ 전체 1000px + 자른것 720px minips 저장</button>
+        <button id="freecrop-save-btn" class="btn" disabled>✂️ 원본 1000px + 크롭 1000px & 720px [다운로드] 저장</button>
     </div>
 
     <!-- TAB 3: 슬라이드 분할 -->
     <div id="tab-slice" class="tab-content">
-        <div class="tip-box">
-            💡 <strong>사용 방법:</strong> 분할 컷 및 통짜 원본이 minips 폴더에 일괄 저장됩니다.
-        </div>
         <div class="controls">
             <div class="control-group">
                 <label>세로 분할 개수</label>
@@ -380,14 +347,11 @@
             </div>
         </div>
         <div id="slice-preview-container" class="preview-grid"></div>
-        <button id="slice-process-btn" class="btn" disabled>🎞️ 통짜 + 분할 이미지 minips 폴더 바로 저장</button>
+        <button id="slice-process-btn" class="btn" disabled>🎞️ 통짜 + 분할 이미지 [다운로드] 저장</button>
     </div>
 
     <!-- TAB 4: 덩어리 자르기 -->
     <div id="tab-block-slice" class="tab-content">
-        <div class="tip-box">
-            💡 <strong>사용 방법:</strong> 상단 덩어리와 하단 덩어리를 잘라 minips 폴더에 저장합니다.
-        </div>
         <div class="controls">
             <div class="control-group">
                 <label>덩어리 분할 비율 선택</label>
@@ -404,13 +368,13 @@
             </div>
         </div>
         <div id="block-preview-container" class="preview-grid"></div>
-        <button id="block-process-btn" class="btn" disabled>🧩 덩어리 minips 폴더 바로 저장</button>
+        <button id="block-process-btn" class="btn" disabled>🧩 덩어리 분할 [다운로드] 저장</button>
     </div>
 
     <!-- TAB 5: 콜라주 메이커 -->
     <div id="tab-collage" class="tab-content">
         <div class="tip-box">
-            💡 <strong>사용 방법:</strong> 드래그 위치조정, <strong>Ctrl + 휠</strong>로 확대/축소 후 바로 저장합니다.
+            💡 <strong>사용 방법:</strong> 드래그로 위치를 조정하고 <strong>Ctrl + 마우스 휠</strong>로 확대/축소하세요.
         </div>
         <div class="controls">
             <div class="control-group">
@@ -434,16 +398,7 @@
             <canvas id="collage-canvas"></canvas>
         </div>
         <div class="item-list" id="collage-item-list"></div>
-        <button id="collage-download-btn" class="btn" disabled>🎬 콜라주 minips 폴더 바로 저장</button>
-    </div>
-
-    <!-- TAB 6: PNG로 변환 -->
-    <div id="tab-png-convert" class="tab-content">
-        <div class="tip-box">
-            💎 <strong>사용 방법:</strong> 화질 손실 없이 무손실 PNG로 minips 폴더에 일괄 저장합니다.
-        </div>
-        <div id="png-preview-container" class="preview-grid"></div>
-        <button id="png-folder-save-btn" class="btn btn-blue" disabled>💎 PNG 파일 minips 폴더 바로 저장</button>
+        <button id="collage-download-btn" class="btn" disabled>🎬 콜라주 [다운로드] 저장</button>
     </div>
 
     <!-- 상태 출력 박스 -->
@@ -482,8 +437,6 @@
     const dropzoneText = document.getElementById('dropzone-text');
     const fileInput = document.getElementById('file-input');
     const statusList = document.getElementById('status-list');
-    const targetDirLabel = document.getElementById('target-dir-label');
-    const btnChangeDir = document.getElementById('btn-change-dir');
 
     // TAB 1
     const resizerBtn = document.getElementById('resizer-process-btn');
@@ -523,98 +476,39 @@
     let collageImages = []; 
     let activeDragIndex = -1, startX = 0, startY = 0, initialOffsetX = 0, initialOffsetY = 0, draggedCardIndex = null;
 
-    // TAB 6
-    const pngPreviewContainer = document.getElementById('png-preview-container');
-    const pngFolderSaveBtn = document.getElementById('png-folder-save-btn');
-    let pngLoadedImages = [];
-
-    // ================= IndexedDB 폴더 핸들 기억 유틸 =================
-    let savedDirectoryHandle = null;
-
-    function openDB() {
-        return new Promise((resolve, reject) => {
-            const req = indexedDB.open('KinocineMiniPS', 1);
-            req.onupgradeneeded = () => req.result.createObjectStore('handles');
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
+    // ================= [핵심] 차단 우회 순차 다운로드 함수 =================
+    // 브라우저 필터에 걸리지 않도록 1.0초(1000ms) 간격을 두고 1장씩 다운로드
+    function safeDownload(blob, filename) {
+        return new Promise(resolve => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                resolve();
+            }, 1000); // 브라우저가 다중 다운로드로 차단하지 않도록 안전 간격 유지
         });
     }
 
-    async function getSavedDir() {
-        try {
-            const db = await openDB();
-            return new Promise((resolve) => {
-                const tx = db.transaction('handles', 'readonly');
-                const req = tx.objectStore('handles').get('targetDir');
-                req.onsuccess = () => resolve(req.result || null);
-                req.onerror = () => resolve(null);
-            });
-        } catch {
-            return null;
-        }
+    function setStatusHeader(text, isDone = false) {
+        statusList.style.display = 'block';
+        const color = isDone ? '#2b8a3e' : '#1c7ed6';
+        statusList.innerHTML = `<div class="status-header" style="color:${color};">${text}</div><div id="status-items-wrap"></div>`;
     }
 
-    async function setSavedDir(handle) {
-        try {
-            const db = await openDB();
-            const tx = db.transaction('handles', 'readwrite');
-            tx.objectStore('handles').put(handle, 'targetDir');
-        } catch (e) {
-            console.error('핸들 저장 실패:', e);
-        }
-    }
-
-    async function initDirHandle() {
-        savedDirectoryHandle = await getSavedDir();
-        if (savedDirectoryHandle) {
-            targetDirLabel.innerHTML = `📁 고정 저장 경로: <strong>${savedDirectoryHandle.name} (선택됨)</strong>`;
-        }
-    }
-    initDirHandle();
-
-    btnChangeDir.addEventListener('click', async () => {
-        try {
-            const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            savedDirectoryHandle = handle;
-            await setSavedDir(handle);
-            targetDirLabel.innerHTML = `📁 고정 저장 경로: <strong>${handle.name} (선택됨)</strong>`;
-        } catch (err) {
-            console.log('폴더 변경 취소:', err);
-        }
-    });
-
-    async function getReadyDirHandle() {
-        if (!window.showDirectoryPicker) {
-            return null; // 미지원 환경은 다운로드 폴백으로 처리
-        }
-
-        if (!savedDirectoryHandle) {
-            try {
-                savedDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                await setSavedDir(savedDirectoryHandle);
-                targetDirLabel.innerHTML = `📁 고정 저장 경로: <strong>${savedDirectoryHandle.name} (선택됨)</strong>`;
-            } catch (err) {
-                return null;
-            }
-        }
-
-        try {
-            let perm = await savedDirectoryHandle.queryPermission({ mode: 'readwrite' });
-            if (perm !== 'granted') {
-                perm = await savedDirectoryHandle.requestPermission({ mode: 'readwrite' });
-                if (perm !== 'granted') return null;
-            }
-        } catch (e) {
-            try {
-                savedDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                await setSavedDir(savedDirectoryHandle);
-                targetDirLabel.innerHTML = `📁 고정 저장 경로: <strong>${savedDirectoryHandle.name} (선택됨)</strong>`;
-            } catch {
-                return null;
-            }
-        }
-
-        return savedDirectoryHandle;
+    function appendStatus(title, message) {
+        const wrap = document.getElementById('status-items-wrap');
+        if (!wrap) return;
+        const item = document.createElement('div');
+        item.className = 'status-item';
+        item.innerHTML = `<span>${title}</span><span style="color:#2b8a3e; font-weight:bold;">${message}</span>`;
+        wrap.appendChild(item);
     }
 
     function getTimeStampString() {
@@ -634,7 +528,7 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
-        const tabs = ['resizer', 'free-crop', 'slice', 'block-slice', 'collage', 'png-convert'];
+        const tabs = ['resizer', 'free-crop', 'slice', 'block-slice', 'collage'];
         const targetIdx = tabs.indexOf(tabName);
         if (targetIdx !== -1) {
             document.querySelectorAll('.tab-btn')[targetIdx].classList.add('active');
@@ -642,30 +536,22 @@
         }
 
         if (tabName === 'resizer') {
-            dropzoneText.textContent = loadedResizerImages.length > 0 ? `📸 ${loadedResizerImages.length}개 이미지 준비됨 (클릭/드롭하여 교체)` : "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
+            dropzoneText.textContent = "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
         } else if (tabName === 'free-crop') {
-            dropzoneText.textContent = freeCropCurrentItem ? `✂️ ${freeCropCurrentItem.file.name} 준비됨` : "✂️ 포토샵 스타일로 직접 자를 사진을 1장 드래그앤드롭 하세요";
+            dropzoneText.textContent = "✂️ 직접 자를 사진을 1장 드래그앤드롭 하세요";
             if (freeCropCurrentItem) drawFreeCropCanvas();
         } else if (tabName === 'slice') {
-            dropzoneText.textContent = "📸 세로로 긴 분할용 이미지를 드래그앤드롭 하세요 (통짜+조각 저장)";
+            dropzoneText.textContent = "📸 세로로 긴 분할용 이미지를 드래그앤드롭 하세요";
         } else if (tabName === 'block-slice') {
             dropzoneText.textContent = "📸 3단/4단 모자이크 스틸컷 이미지를 드래그앤드롭 하세요";
         } else if (tabName === 'collage') {
             dropzoneText.textContent = "📸 콜라주 합성할 사진들을 드래그앤드롭 하세요";
-        } else if (tabName === 'png-convert') {
-            dropzoneText.textContent = "💎 PNG로 포맷 변경할 최종 작업 사진들을 드래그앤드롭 하세요";
         }
     }
 
-    // 파일 로드 이벤트
+    // 파일 로드
     dropzone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files.length > 0) {
-            handleFiles(e.target.files);
-        }
-        fileInput.value = '';
-    });
-
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#111'; });
     dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'var(--primary-color)'; });
     dropzone.addEventListener('drop', (e) => {
@@ -754,24 +640,6 @@
             }
             updateCollageUI();
             renderCollageCanvas();
-
-        } else if (activeTab === 'png-convert') {
-            pngLoadedImages = [];
-            pngPreviewContainer.innerHTML = '⏳ PNG 변환을 준비하고 있습니다...';
-            pngFolderSaveBtn.disabled = true;
-
-            for (const file of validFiles) {
-                try {
-                    const imgObj = await loadImage(file);
-                    pngLoadedImages.push({ file, imgObj });
-                } catch (err) { console.error("PNG 이미지 로드 실패:", err); }
-            }
-
-            if (pngLoadedImages.length > 0) {
-                renderPngPreviews();
-                pngFolderSaveBtn.disabled = false;
-                dropzoneText.innerHTML = `💎 총 <strong>${pngLoadedImages.length}개</strong>의 사진이 PNG 변환 준비되었습니다.`;
-            }
         }
     }
 
@@ -902,37 +770,36 @@
     }
 
     resizerBtn.addEventListener('click', async () => {
-        const dirHandle = await getReadyDirHandle();
         const targetWidth = parseInt(document.getElementById('r-target-width').value) || 1000;
         const quality = parseFloat(document.getElementById('r-img-quality').value);
 
         resizerBtn.disabled = true;
-        statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] 변환 저장 중...</div>`;
+        setStatusHeader(`⚡ [다운로드 폴더] 순차 다운로드 중...`);
 
         for (const data of loadedResizerImages) {
             try {
                 const ts = getTimeStampString();
 
-                // 1000px 기본
+                // 1. 1000px
                 const mainImg = await processResizeAutoHeight(data.file, data.img, targetWidth, quality, `${ts}_${targetWidth}.jpg`);
-                await smartSaveFile(dirHandle, mainImg.name, mainImg.blob);
+                await safeDownload(mainImg.blob, mainImg.name);
+                appendStatus(`${mainImg.name}`, '다운로드 완료');
 
-                // 720px 크롭
+                // 2. 720px
                 const thumb720 = await processCustomCrop(data.file, data.img, 720, 420, data.crop720, quality, `${ts}_720.jpg`);
-                await smartSaveFile(dirHandle, thumb720.name, thumb720.blob);
+                await safeDownload(thumb720.blob, thumb720.name);
+                appendStatus(`${thumb720.name}`, '다운로드 완료');
 
-                // 500px 정방형
+                // 3. 500px
                 const thumb500 = await processCustomCrop(data.file, data.img, 500, 500, data.crop500, quality, `${ts}_500.jpg`);
-                await smartSaveFile(dirHandle, thumb500.name, thumb500.blob);
+                await safeDownload(thumb500.blob, thumb500.name);
+                appendStatus(`${thumb500.name}`, '다운로드 완료');
 
-                appendStatus(`💾 ${data.file.name}`, `_${targetWidth}, _720, _500 저장 완료`);
-                await new Promise(r => setTimeout(r, 200));
             } catch (err) { console.error(err); }
         }
 
+        setStatusHeader(`✅ 모든 파일 다운로드 완료 (_${targetWidth}, _720, _500 저장 완료)`, true);
         resizerBtn.disabled = false;
-        alert('모든 사진이 성공적으로 저장되었습니다!');
     });
 
     // ================= [TAB 2] 포토샵식 자유 자르기 =================
@@ -969,12 +836,12 @@
 
     function updateFreeCropInfo() {
         if (!cropRect || !freeCropCurrentItem) {
-            freeCropInfo.textContent = '선택 영역: 없음 (마우스 드래그로 영역 생성)';
+            freeCropInfo.textContent = '선택 영역: 없음 (마우스 드래그로 영역 지정)';
             return;
         }
         const w = Math.round(cropRect.w);
         const h = Math.round(cropRect.h);
-        freeCropInfo.innerHTML = `선택 영역: <strong>${w} × ${h} px</strong> ➡ 저장 시 <strong>720px</strong>로 비례 조정`;
+        freeCropInfo.innerHTML = `선택 영역: <strong>${w} × ${h} px</strong> ➡ 저장 시 <strong>원본 1000px + 크롭 1000px & 720px</strong> 생성`;
     }
 
     function getCanvasScale() {
@@ -1182,58 +1049,72 @@
         }
     });
 
-    // ✂️ 자르기 저장 실행
+    // ✂️ 자르기 저장: 오리지널 1000px + 크롭 1000px + 크롭 720px
     freeCropSaveBtn.addEventListener('click', async () => {
         if (!freeCropCurrentItem) return;
-        const dirHandle = await getReadyDirHandle();
 
         freeCropSaveBtn.disabled = true;
-        statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] 포토샵 자르기 처리 및 저장 중...</div>`;
+        setStatusHeader(`✂️ [다운로드 폴더] 3종 이미지 저장 중...`);
 
         try {
             const ts = getTimeStampString();
             const img = freeCropCurrentItem.imgObj;
 
-            // 1. 전체 이미지 가로 1000px 비례 리사이즈
-            const fullW = 1000;
-            const fullH = img.height * (fullW / img.width);
-            const fullCanvas = document.createElement('canvas');
-            fullCanvas.width = fullW;
-            fullCanvas.height = fullH;
-            const fullCtx = fullCanvas.getContext('2d');
-            fullCtx.imageSmoothingQuality = 'high';
-            fullCtx.drawImage(img, 0, 0, fullW, fullH);
+            // 1. 오리지널 전체 1000px
+            const origW = 1000;
+            const origH = img.height * (origW / img.width);
+            const origCanvas = document.createElement('canvas');
+            origCanvas.width = origW;
+            origCanvas.height = origH;
+            const origCtx = origCanvas.getContext('2d');
+            origCtx.imageSmoothingQuality = 'high';
+            origCtx.drawImage(img, 0, 0, origW, origH);
 
-            const fullBlob = await new Promise(r => fullCanvas.toBlob(r, 'image/jpeg', 0.92));
-            const fullFileName = `${ts}_1000.jpg`;
-            await smartSaveFile(dirHandle, fullFileName, fullBlob);
-            appendStatus(`✂️ 전체 이미지 (1000px)`, `${fullFileName} 저장 완료`);
+            const origBlob = await new Promise(r => origCanvas.toBlob(r, 'image/jpeg', 0.92));
+            const origFileName = `${ts}_orig_1000.jpg`;
+            await safeDownload(origBlob, origFileName);
+            appendStatus(`📷 오리지널 1000px`, `${origFileName} 저장 완료`);
 
-            // 2. 자른 영역 가로 720px 비례 리사이즈
+            // 크롭 영역 확인
             let cropSrc = cropRect;
             if (!cropSrc) {
                 cropSrc = { x: 0, y: 0, w: img.width, h: img.height };
             }
 
-            const cropW = 720;
-            const cropH = cropSrc.h * (cropW / cropSrc.w);
-            const cropCanvas = document.createElement('canvas');
-            cropCanvas.width = cropW;
-            cropCanvas.height = cropH;
-            const cropCtx = cropCanvas.getContext('2d');
-            cropCtx.imageSmoothingQuality = 'high';
-            cropCtx.drawImage(img, cropSrc.x, cropSrc.y, cropSrc.w, cropSrc.h, 0, 0, cropW, cropH);
+            // 2. 크롭 1000px
+            const crop1000W = 1000;
+            const crop1000H = cropSrc.h * (crop1000W / cropSrc.w);
+            const crop1000Canvas = document.createElement('canvas');
+            crop1000Canvas.width = crop1000W;
+            crop1000Canvas.height = crop1000H;
+            const crop1000Ctx = crop1000Canvas.getContext('2d');
+            crop1000Ctx.imageSmoothingQuality = 'high';
+            crop1000Ctx.drawImage(img, cropSrc.x, cropSrc.y, cropSrc.w, cropSrc.h, 0, 0, crop1000W, crop1000H);
 
-            const cropBlob = await new Promise(r => cropCanvas.toBlob(r, 'image/jpeg', 0.92));
-            const cropFileName = `${ts}_720_crop.jpg`;
-            await smartSaveFile(dirHandle, cropFileName, cropBlob);
-            appendStatus(`✂️ 자른 영역 (720px)`, `${cropFileName} 저장 완료`);
+            const crop1000Blob = await new Promise(r => crop1000Canvas.toBlob(r, 'image/jpeg', 0.92));
+            const crop1000FileName = `${ts}_crop_1000.jpg`;
+            await safeDownload(crop1000Blob, crop1000FileName);
+            appendStatus(`✂️ 자른 영역 1000px`, `${crop1000FileName} 저장 완료`);
 
-            alert(`저장 완료!\n- 전체: ${fullFileName}\n- 자른 영역: ${cropFileName}`);
+            // 3. 크롭 720px
+            const crop720W = 720;
+            const crop720H = cropSrc.h * (crop720W / cropSrc.w);
+            const crop720Canvas = document.createElement('canvas');
+            crop720Canvas.width = crop720W;
+            crop720Canvas.height = crop720H;
+            const crop720Ctx = crop720Canvas.getContext('2d');
+            crop720Ctx.imageSmoothingQuality = 'high';
+            crop720Ctx.drawImage(img, cropSrc.x, cropSrc.y, cropSrc.w, cropSrc.h, 0, 0, crop720W, crop720H);
+
+            const crop720Blob = await new Promise(r => crop720Canvas.toBlob(r, 'image/jpeg', 0.92));
+            const crop720FileName = `${ts}_crop_720.jpg`;
+            await safeDownload(crop720Blob, crop720FileName);
+            appendStatus(`✂️ 자른 영역 720px`, `${crop720FileName} 저장 완료`);
+
+            setStatusHeader(`✅ 저장 완료 (오리지널 1000px + 크롭 1000px & 720px)`, true);
         } catch (err) {
             console.error(err);
-            alert('저장 중 오류가 발생했습니다.');
+            setStatusHeader(`❌ 저장 중 오류 발생`, false);
         } finally {
             freeCropSaveBtn.disabled = false;
         }
@@ -1292,17 +1173,15 @@
     }
 
     sliceProcessBtn.addEventListener('click', async () => {
-        const dirHandle = await getReadyDirHandle();
         const parts = parseInt(slicePartsSelect.value);
         sliceProcessBtn.disabled = true;
-        statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] 슬라이드 분할 저장 중...</div>`;
+        setStatusHeader(`🎞️ 슬라이드 분할 다운로드 중...`);
 
         for (const item of sliceLoadedImages) {
             const img = item.imgObj;
             const ts = getTimeStampString();
 
-            // 통짜 {ts}_1000_full.jpg
+            // 통짜
             const fullCanvas = document.createElement('canvas');
             const fullCtx = fullCanvas.getContext('2d');
             fullCanvas.width = 1000;
@@ -1311,7 +1190,7 @@
             fullCtx.drawImage(img, 0, 0, fullCanvas.width, fullCanvas.height);
             const fullBlob = await new Promise(res => fullCanvas.toBlob(res, 'image/jpeg', 0.92));
             const fullFileName = `${ts}_1000_full.jpg`;
-            await smartSaveFile(dirHandle, fullFileName, fullBlob);
+            await safeDownload(fullBlob, fullFileName);
             appendStatus(`🎞️ ${fullFileName}`, '통짜 저장 완료');
 
             // 분할 조각
@@ -1328,14 +1207,13 @@
                 const padNum = String(i + 1).padStart(2, '0');
                 const outFileName = `${ts}_1000_part${padNum}.jpg`;
 
-                await smartSaveFile(dirHandle, outFileName, blob);
+                await safeDownload(blob, outFileName);
                 appendStatus(`🎞️ ${outFileName}`, '조각 저장 완료');
             }
-            await new Promise(r => setTimeout(r, 200));
         }
 
+        setStatusHeader(`✅ 모든 슬라이드 분할 다운로드 완료`, true);
         sliceProcessBtn.disabled = false;
-        alert('모든 슬라이드가 저장되었습니다!');
     });
 
     // ================= [TAB 4] 덩어리 자르기 =================
@@ -1402,13 +1280,11 @@
     }
 
     blockProcessBtn.addEventListener('click', async () => {
-        const dirHandle = await getReadyDirHandle();
         const mode = blockModeSelect.value;
         const configs = getBlockConfigs(mode);
 
         blockProcessBtn.disabled = true;
-        statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] 덩어리 자르기 저장 중...</div>`;
+        setStatusHeader(`🧩 덩어리 분할 다운로드 중...`);
 
         for (const item of blockLoadedImages) {
             const img = item.imgObj;
@@ -1428,14 +1304,13 @@
                 const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
                 const outFileName = `${ts}_1000_${cfg.tag}.jpg`;
 
-                await smartSaveFile(dirHandle, outFileName, blob);
+                await safeDownload(blob, outFileName);
                 appendStatus(`🧩 ${outFileName}`, '저장 완료');
             }
-            await new Promise(r => setTimeout(r, 200));
         }
 
+        setStatusHeader(`✅ 모든 덩어리 이미지 다운로드 완료`, true);
         blockProcessBtn.disabled = false;
-        alert('모든 덩어리가 저장되었습니다!');
     });
 
     // ================= [TAB 5] 분할 콜라주 =================
@@ -1456,7 +1331,7 @@
                     <div class="item-name">${index + 1}번: ${item.file.name}</div>
                     <div style="font-size:11px; color:#868e96;">배율: ${(item.zoom * 100).toFixed(0)}%</div>
                 </div>
-                <button class="btn-small btn-danger" onclick="removeCollageItem(${index})">삭제</button>
+                <button class="btn-small" style="background:#e03131; color:#fff;" onclick="removeCollageItem(${index})">삭제</button>
             `;
 
             card.addEventListener('dragstart', () => { draggedCardIndex = index; card.classList.add('dragging'); });
@@ -1585,95 +1460,16 @@
     }, { passive: false });
 
     collageDownloadBtn.addEventListener('click', async () => {
-        const dirHandle = await getReadyDirHandle();
         const ts = getTimeStampString();
         const cWidth = parseInt(document.getElementById('c-width').value) || 1000;
         const fileName = `${ts}_${cWidth}_collage.jpg`;
 
         const blob = await new Promise(res => collageCanvas.toBlob(res, 'image/jpeg', 0.92));
-        await smartSaveFile(dirHandle, fileName, blob);
-        alert(`${fileName} 이 저장되었습니다!`);
+        await safeDownload(blob, fileName);
+        setStatusHeader(`✅ ${fileName} 다운로드 완료`, true);
     });
 
-    // ================= [TAB 6] PNG로 변환 =================
-    function renderPngPreviews() {
-        pngPreviewContainer.innerHTML = '';
-        pngLoadedImages.forEach((item) => {
-            const card = document.createElement('div');
-            card.className = 'preview-card';
-
-            const previewImg = document.createElement('img');
-            previewImg.src = item.imgObj.src;
-
-            const label = document.createElement('div');
-            label.className = 'preview-label';
-            label.textContent = item.file.name;
-
-            card.appendChild(previewImg);
-            card.appendChild(label);
-            pngPreviewContainer.appendChild(card);
-        });
-    }
-
-    pngFolderSaveBtn.addEventListener('click', async () => {
-        const dirHandle = await getReadyDirHandle();
-        pngFolderSaveBtn.disabled = true;
-        statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] PNG 변환 저장 중...</div>`;
-
-        for (const item of pngLoadedImages) {
-            const img = item.imgObj;
-            const ts = getTimeStampString();
-
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-
-            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-            const outFileName = `${ts}_${img.width}.png`;
-
-            await smartSaveFile(dirHandle, outFileName, blob);
-            appendStatus(`💎 ${outFileName}`, 'PNG 저장 완료');
-            await new Promise(r => setTimeout(r, 200));
-        }
-
-        pngFolderSaveBtn.disabled = false;
-        alert('모든 사진이 PNG로 저장되었습니다!');
-    });
-
-    // ================= [스마트 저장 유틸] 폴더 저장 실패 시 자동 다운로드 폴백 =================
-    async function smartSaveFile(dirHandle, filename, blob) {
-        if (dirHandle) {
-            try {
-                const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                return;
-            } catch (err) {
-                console.warn('폴더 직접 쓰기 실패, 자동 다운로드 방식으로 전환합니다:', err);
-            }
-        }
-        
-        // 브라우저 직접 다운로드 Fallback
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    }
-
-    function appendStatus(title, message) {
-        const item = document.createElement('div');
-        item.className = 'status-item';
-        item.innerHTML = `<span>${title}</span><span style="color:#2b8a3e; font-weight:bold;">${message}</span>`;
-        statusList.appendChild(item);
-    }
-
+    // ================= 유틸리티 =================
     function processResizeAutoHeight(file, img, targetWidth, quality, outName) {
         return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
@@ -1693,12 +1489,7 @@
             const ctx = canvas.getContext('2d');
             canvas.width = targetW; canvas.height = targetH;
             ctx.imageSmoothingQuality = 'high';
-            
-            if (cropData) {
-                ctx.drawImage(img, cropData.sourceX, cropData.sourceY, cropData.sourceW, cropData.sourceH, 0, 0, targetW, targetH);
-            } else {
-                ctx.drawImage(img, 0, 0, targetW, targetH);
-            }
+            ctx.drawImage(img, cropData.sourceX, cropData.sourceY, cropData.sourceW, cropData.sourceH, 0, 0, targetW, targetH);
             canvas.toBlob((blob) => resolve({ name: outName, blob }), 'image/jpeg', quality);
         });
     }
