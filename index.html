@@ -298,11 +298,11 @@
 
     <!-- 폴더 상태 바 -->
     <div class="dir-bar">
-        <span id="target-dir-label">📁 고정 저장 경로: <strong>미지정 (최초 1회 C:\minips 지정 필요)</strong></span>
+        <span id="target-dir-label">📁 고정 저장 경로: <strong>미지정 (최초 1회 D:\minips 지정 필요)</strong></span>
         <button id="btn-change-dir" type="button">저장 폴더 변경</button>
     </div>
 
-    <!-- 탭 메뉴 (두 번째에 [자르기] 탭 추가) -->
+    <!-- 탭 메뉴 -->
     <div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('resizer')">⚡ 리사이즈 & 크롭</button>
         <button class="tab-btn" onclick="switchTab('free-crop')">✂️ 자르기</button>
@@ -321,7 +321,7 @@
     <!-- TAB 1: 스마트 리사이즈 & 크롭 -->
     <div id="tab-resizer" class="tab-content active">
         <div class="tip-box">
-            💡 <strong>자동 저장 모드:</strong> 크롭 설정이 끝나면 폴더 선택 창 없이 지정된 <strong>minips</strong> 폴더에 즉시 저장됩니다.
+            💡 <strong>자동 저장 모드:</strong> 크롭 설정이 끝나면 D:\minips 폴더에 <code>1000px</code>, <code>720px</code>, <code>500px</code> 이미지가 자동 일괄 저장됩니다.
         </div>
         <div class="controls">
             <div class="control-group">
@@ -340,10 +340,10 @@
         <button id="resizer-process-btn" class="btn" disabled>⚡ 변환 및 minips 폴더 바로 저장</button>
     </div>
 
-    <!-- TAB 2 (NEW): 포토샵식 자유 자르기 -->
+    <!-- TAB 2: 자유 자르기 -->
     <div id="tab-free-crop" class="tab-content">
         <div class="tip-box">
-            ✂️ <strong>포토샵 자르기 모드:</strong> 마우스로 원하는 영역을 드래그하여 선택하세요. (모서리/테두리를 끌어 크기 조절 가능)<br>
+            ✂️ <strong>포토샵 자르기 모드:</strong> 마우스로 원하는 영역을 드래그하여 선택하세요.<br>
             저장 시 <strong>전체 원본 1000px</strong>(1장)과 <strong>자른 영역 720px</strong>(1장)이 <code>minips</code> 폴더에 자동 저장됩니다.
         </div>
         <div class="crop-toolbar">
@@ -497,7 +497,7 @@
     const freeCropSaveBtn = document.getElementById('freecrop-save-btn');
     const freeCropInfo = document.getElementById('freecrop-info');
     let freeCropCurrentItem = null;
-    let cropRect = null; // { x, y, w, h } 원본 이미지 픽셀 좌표 기준
+    let cropRect = null;
     let isDrawingCrop = false, isMovingCrop = false, isResizingCrop = false;
     let dragStartPos = { x: 0, y: 0 };
     let cropRectStart = null;
@@ -541,19 +541,27 @@
     }
 
     async function getSavedDir() {
-        const db = await openDB();
-        return new Promise((resolve) => {
-            const tx = db.transaction('handles', 'readonly');
-            const req = tx.objectStore('handles').get('targetDir');
-            req.onsuccess = () => resolve(req.result || null);
-            req.onerror = () => resolve(null);
-        });
+        try {
+            const db = await openDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction('handles', 'readonly');
+                const req = tx.objectStore('handles').get('targetDir');
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = () => resolve(null);
+            });
+        } catch {
+            return null;
+        }
     }
 
     async function setSavedDir(handle) {
-        const db = await openDB();
-        const tx = db.transaction('handles', 'readwrite');
-        tx.objectStore('handles').put(handle, 'targetDir');
+        try {
+            const db = await openDB();
+            const tx = db.transaction('handles', 'readwrite');
+            tx.objectStore('handles').put(handle, 'targetDir');
+        } catch (e) {
+            console.error('핸들 저장 실패:', e);
+        }
     }
 
     async function initDirHandle() {
@@ -570,17 +578,33 @@
             savedDirectoryHandle = handle;
             await setSavedDir(handle);
             targetDirLabel.innerHTML = `📁 고정 저장 경로: <strong>${handle.name} (선택됨)</strong>`;
-            alert(`'${handle.name}' 폴더가 기본 저장 경로로 지정되었습니다.`);
-        } catch {}
+        } catch (err) {
+            console.log('폴더 변경 취소:', err);
+        }
     });
 
     async function getReadyDirHandle() {
         if (!window.showDirectoryPicker) {
-            alert('File System Access API를 지원하지 않는 브라우저입니다.');
-            return null;
+            return null; // 미지원 환경은 다운로드 폴백으로 처리
         }
+
         if (!savedDirectoryHandle) {
-            alert('최초 1회: C:\\minips 폴더를 선택해 주세요.');
+            try {
+                savedDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                await setSavedDir(savedDirectoryHandle);
+                targetDirLabel.innerHTML = `📁 고정 저장 경로: <strong>${savedDirectoryHandle.name} (선택됨)</strong>`;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        try {
+            let perm = await savedDirectoryHandle.queryPermission({ mode: 'readwrite' });
+            if (perm !== 'granted') {
+                perm = await savedDirectoryHandle.requestPermission({ mode: 'readwrite' });
+                if (perm !== 'granted') return null;
+            }
+        } catch (e) {
             try {
                 savedDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                 await setSavedDir(savedDirectoryHandle);
@@ -589,11 +613,7 @@
                 return null;
             }
         }
-        const perm = await savedDirectoryHandle.queryPermission({ mode: 'readwrite' });
-        if (perm !== 'granted') {
-            const reqPerm = await savedDirectoryHandle.requestPermission({ mode: 'readwrite' });
-            if (reqPerm !== 'granted') return null;
-        }
+
         return savedDirectoryHandle;
     }
 
@@ -622,9 +642,9 @@
         }
 
         if (tabName === 'resizer') {
-            dropzoneText.textContent = "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
+            dropzoneText.textContent = loadedResizerImages.length > 0 ? `📸 ${loadedResizerImages.length}개 이미지 준비됨 (클릭/드롭하여 교체)` : "📸 일괄 변환 및 크롭할 사진들을 드래그앤드롭 하세요";
         } else if (tabName === 'free-crop') {
-            dropzoneText.textContent = "✂️ 포토샵 스타일로 직접 자를 사진을 1장 드래그앤드롭 하세요";
+            dropzoneText.textContent = freeCropCurrentItem ? `✂️ ${freeCropCurrentItem.file.name} 준비됨` : "✂️ 포토샵 스타일로 직접 자를 사진을 1장 드래그앤드롭 하세요";
             if (freeCropCurrentItem) drawFreeCropCanvas();
         } else if (tabName === 'slice') {
             dropzoneText.textContent = "📸 세로로 긴 분할용 이미지를 드래그앤드롭 하세요 (통짜+조각 저장)";
@@ -637,9 +657,15 @@
         }
     }
 
-    // 파일 로드
+    // 파일 로드 이벤트
     dropzone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleFiles(e.target.files);
+        }
+        fileInput.value = '';
+    });
+
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#111'; });
     dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'var(--primary-color)'; });
     dropzone.addEventListener('drop', (e) => {
@@ -670,7 +696,6 @@
             }
 
         } else if (activeTab === 'free-crop') {
-            // [자르기] 탭: 단일 이미지 포토샵 자르기
             dropzoneText.innerHTML = `⏳ 자르기용 이미지 준비 중...`;
             const file = validFiles[0];
             try {
@@ -878,38 +903,36 @@
 
     resizerBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
-        if (!dirHandle) return;
-
         const targetWidth = parseInt(document.getElementById('r-target-width').value) || 1000;
         const quality = parseFloat(document.getElementById('r-img-quality').value);
 
         resizerBtn.disabled = true;
         statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[minips] 자동 저장 중...</div>`;
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] 변환 저장 중...</div>`;
 
         for (const data of loadedResizerImages) {
             try {
                 const ts = getTimeStampString();
 
-                // {ts}_1000.jpg 기본
+                // 1000px 기본
                 const mainImg = await processResizeAutoHeight(data.file, data.img, targetWidth, quality, `${ts}_${targetWidth}.jpg`);
-                await saveFileDirect(dirHandle, mainImg.name, mainImg.blob);
+                await smartSaveFile(dirHandle, mainImg.name, mainImg.blob);
 
-                // {ts}_720.jpg
+                // 720px 크롭
                 const thumb720 = await processCustomCrop(data.file, data.img, 720, 420, data.crop720, quality, `${ts}_720.jpg`);
-                await saveFileDirect(dirHandle, thumb720.name, thumb720.blob);
+                await smartSaveFile(dirHandle, thumb720.name, thumb720.blob);
 
-                // {ts}_500.jpg
+                // 500px 정방형
                 const thumb500 = await processCustomCrop(data.file, data.img, 500, 500, data.crop500, quality, `${ts}_500.jpg`);
-                await saveFileDirect(dirHandle, thumb500.name, thumb500.blob);
+                await smartSaveFile(dirHandle, thumb500.name, thumb500.blob);
 
                 appendStatus(`💾 ${data.file.name}`, `_${targetWidth}, _720, _500 저장 완료`);
-                await new Promise(r => setTimeout(r, 1000));
+                await new Promise(r => setTimeout(r, 200));
             } catch (err) { console.error(err); }
         }
 
         resizerBtn.disabled = false;
-        alert('모든 사진이 minips 폴더에 성공적으로 저장되었습니다!');
+        alert('모든 사진이 성공적으로 저장되었습니다!');
     });
 
     // ================= [TAB 2] 포토샵식 자유 자르기 =================
@@ -917,7 +940,6 @@
         if (!freeCropCurrentItem) return;
         const img = freeCropCurrentItem.imgObj;
         
-        // 캔버스 디스플레이 크기 설정 (화면 너비에 맞게)
         const containerWidth = freeCropCanvas.parentElement.clientWidth || 930;
         const displayWidth = Math.min(img.width, containerWidth);
         const displayHeight = img.height * (displayWidth / img.width);
@@ -925,7 +947,6 @@
         freeCropCanvas.width = displayWidth;
         freeCropCanvas.height = displayHeight;
 
-        // 기본 크롭 영역: 정중앙 60% 영역 자동 초기화
         const initW = img.width * 0.7;
         const initH = img.height * 0.7;
         cropRect = {
@@ -976,23 +997,16 @@
         const rw = cropRect.w * scale;
         const rh = cropRect.h * scale;
 
-        // 어두운 반투명 딤(Dim) 처리
         freeCropCtx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-        // 상
         freeCropCtx.fillRect(0, 0, freeCropCanvas.width, ry);
-        // 하
         freeCropCtx.fillRect(0, ry + rh, freeCropCanvas.width, freeCropCanvas.height - (ry + rh));
-        // 좌
         freeCropCtx.fillRect(0, ry, rx, rh);
-        // 우
         freeCropCtx.fillRect(rx + rw, ry, freeCropCanvas.width - (rx + rw), rh);
 
-        // 포토샵 스타일 선택 박스 테두리
         freeCropCtx.strokeStyle = '#ffffff';
         freeCropCtx.lineWidth = 1.5;
         freeCropCtx.strokeRect(rx, ry, rw, rh);
 
-        // 3등분 그리드 안내선
         freeCropCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
         freeCropCtx.lineWidth = 1;
         freeCropCtx.beginPath();
@@ -1006,7 +1020,6 @@
         freeCropCtx.lineTo(rx + rw, ry + (rh * 2) / 3);
         freeCropCtx.stroke();
 
-        // 8개 조절 핸들 그리기
         const handles = getCropHandles(rx, ry, rw, rh);
         freeCropCtx.fillStyle = '#ffffff';
         freeCropCtx.strokeStyle = '#000000';
@@ -1076,7 +1089,6 @@
             isMovingCrop = true;
             cropRectStart = { ...cropRect };
         } else {
-            // 새로 영역 그리기 시작
             isDrawingCrop = true;
             cropRect = { x: dragStartPos.x, y: dragStartPos.y, w: 0, h: 0 };
         }
@@ -1091,7 +1103,6 @@
         const curImgX = mx / scale;
         const curImgY = my / scale;
 
-        // 커서 모양 변경
         if (!isDrawingCrop && !isMovingCrop && !isResizingCrop) {
             const h = getHandleAtPos(mx, my);
             if (h) {
@@ -1171,21 +1182,20 @@
         }
     });
 
-    // ✂️ 자르기 저장 실행: 전체 1000px + 자른것 720px
+    // ✂️ 자르기 저장 실행
     freeCropSaveBtn.addEventListener('click', async () => {
         if (!freeCropCurrentItem) return;
         const dirHandle = await getReadyDirHandle();
-        if (!dirHandle) return;
 
         freeCropSaveBtn.disabled = true;
         statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[minips] 포토샵 자르기 처리 및 저장 중...</div>`;
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] 포토샵 자르기 처리 및 저장 중...</div>`;
 
         try {
             const ts = getTimeStampString();
             const img = freeCropCurrentItem.imgObj;
 
-            // 1. 전체 이미지 가로 1000px 비례 리사이즈 저장
+            // 1. 전체 이미지 가로 1000px 비례 리사이즈
             const fullW = 1000;
             const fullH = img.height * (fullW / img.width);
             const fullCanvas = document.createElement('canvas');
@@ -1197,13 +1207,12 @@
 
             const fullBlob = await new Promise(r => fullCanvas.toBlob(r, 'image/jpeg', 0.92));
             const fullFileName = `${ts}_1000.jpg`;
-            await saveFileDirect(dirHandle, fullFileName, fullBlob);
+            await smartSaveFile(dirHandle, fullFileName, fullBlob);
             appendStatus(`✂️ 전체 이미지 (1000px)`, `${fullFileName} 저장 완료`);
 
-            // 2. 자른 영역 가로 720px 비례 리사이즈 저장
+            // 2. 자른 영역 가로 720px 비례 리사이즈
             let cropSrc = cropRect;
             if (!cropSrc) {
-                // 영역 지정이 안 된 경우 중앙 720p 기준으로 기본 자르기
                 cropSrc = { x: 0, y: 0, w: img.width, h: img.height };
             }
 
@@ -1218,7 +1227,7 @@
 
             const cropBlob = await new Promise(r => cropCanvas.toBlob(r, 'image/jpeg', 0.92));
             const cropFileName = `${ts}_720_crop.jpg`;
-            await saveFileDirect(dirHandle, cropFileName, cropBlob);
+            await smartSaveFile(dirHandle, cropFileName, cropBlob);
             appendStatus(`✂️ 자른 영역 (720px)`, `${cropFileName} 저장 완료`);
 
             alert(`저장 완료!\n- 전체: ${fullFileName}\n- 자른 영역: ${cropFileName}`);
@@ -1284,12 +1293,10 @@
 
     sliceProcessBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
-        if (!dirHandle) return;
-
         const parts = parseInt(slicePartsSelect.value);
         sliceProcessBtn.disabled = true;
         statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[minips] 슬라이드 분할 저장 중...</div>`;
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] 슬라이드 분할 저장 중...</div>`;
 
         for (const item of sliceLoadedImages) {
             const img = item.imgObj;
@@ -1304,10 +1311,10 @@
             fullCtx.drawImage(img, 0, 0, fullCanvas.width, fullCanvas.height);
             const fullBlob = await new Promise(res => fullCanvas.toBlob(res, 'image/jpeg', 0.92));
             const fullFileName = `${ts}_1000_full.jpg`;
-            await saveFileDirect(dirHandle, fullFileName, fullBlob);
+            await smartSaveFile(dirHandle, fullFileName, fullBlob);
             appendStatus(`🎞️ ${fullFileName}`, '통짜 저장 완료');
 
-            // 분할 조각 {ts}_1000_part01.jpg
+            // 분할 조각
             const pieceHeight = img.height / parts;
             for (let i = 0; i < parts; i++) {
                 const canvas = document.createElement('canvas');
@@ -1321,14 +1328,14 @@
                 const padNum = String(i + 1).padStart(2, '0');
                 const outFileName = `${ts}_1000_part${padNum}.jpg`;
 
-                await saveFileDirect(dirHandle, outFileName, blob);
+                await smartSaveFile(dirHandle, outFileName, blob);
                 appendStatus(`🎞️ ${outFileName}`, '조각 저장 완료');
             }
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 200));
         }
 
         sliceProcessBtn.disabled = false;
-        alert('모든 슬라이드가 minips 폴더에 저장되었습니다!');
+        alert('모든 슬라이드가 저장되었습니다!');
     });
 
     // ================= [TAB 4] 덩어리 자르기 =================
@@ -1396,14 +1403,12 @@
 
     blockProcessBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
-        if (!dirHandle) return;
-
         const mode = blockModeSelect.value;
         const configs = getBlockConfigs(mode);
 
         blockProcessBtn.disabled = true;
         statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[minips] 덩어리 자르기 저장 중...</div>`;
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] 덩어리 자르기 저장 중...</div>`;
 
         for (const item of blockLoadedImages) {
             const img = item.imgObj;
@@ -1423,14 +1428,14 @@
                 const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
                 const outFileName = `${ts}_1000_${cfg.tag}.jpg`;
 
-                await saveFileDirect(dirHandle, outFileName, blob);
+                await smartSaveFile(dirHandle, outFileName, blob);
                 appendStatus(`🧩 ${outFileName}`, '저장 완료');
             }
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 200));
         }
 
         blockProcessBtn.disabled = false;
-        alert('모든 덩어리가 minips 폴더에 저장되었습니다!');
+        alert('모든 덩어리가 저장되었습니다!');
     });
 
     // ================= [TAB 5] 분할 콜라주 =================
@@ -1581,15 +1586,13 @@
 
     collageDownloadBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
-        if (!dirHandle) return;
-
         const ts = getTimeStampString();
         const cWidth = parseInt(document.getElementById('c-width').value) || 1000;
         const fileName = `${ts}_${cWidth}_collage.jpg`;
 
         const blob = await new Promise(res => collageCanvas.toBlob(res, 'image/jpeg', 0.92));
-        await saveFileDirect(dirHandle, fileName, blob);
-        alert(`${fileName} 이 minips 폴더에 저장되었습니다!`);
+        await smartSaveFile(dirHandle, fileName, blob);
+        alert(`${fileName} 이 저장되었습니다!`);
     });
 
     // ================= [TAB 6] PNG로 변환 =================
@@ -1614,11 +1617,9 @@
 
     pngFolderSaveBtn.addEventListener('click', async () => {
         const dirHandle = await getReadyDirHandle();
-        if (!dirHandle) return;
-
         pngFolderSaveBtn.disabled = true;
         statusList.style.display = 'block';
-        statusList.innerHTML = `<div style="font-weight:bold;">[minips] PNG 무손실 변환 저장 중...</div>`;
+        statusList.innerHTML = `<div style="font-weight:bold;">[${dirHandle ? dirHandle.name : '브라우저 다운로드'}] PNG 변환 저장 중...</div>`;
 
         for (const item of pngLoadedImages) {
             const img = item.imgObj;
@@ -1633,21 +1634,37 @@
             const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
             const outFileName = `${ts}_${img.width}.png`;
 
-            await saveFileDirect(dirHandle, outFileName, blob);
+            await smartSaveFile(dirHandle, outFileName, blob);
             appendStatus(`💎 ${outFileName}`, 'PNG 저장 완료');
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 200));
         }
 
         pngFolderSaveBtn.disabled = false;
-        alert('모든 사진이 PNG로 minips 폴더에 저장되었습니다!');
+        alert('모든 사진이 PNG로 저장되었습니다!');
     });
 
-    // ================= 유틸리티 =================
-    async function saveFileDirect(dirHandle, filename, blob) {
-        const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(blob);
-        await writable.close();
+    // ================= [스마트 저장 유틸] 폴더 저장 실패 시 자동 다운로드 폴백 =================
+    async function smartSaveFile(dirHandle, filename, blob) {
+        if (dirHandle) {
+            try {
+                const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                return;
+            } catch (err) {
+                console.warn('폴더 직접 쓰기 실패, 자동 다운로드 방식으로 전환합니다:', err);
+            }
+        }
+        
+        // 브라우저 직접 다운로드 Fallback
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
 
     function appendStatus(title, message) {
@@ -1676,7 +1693,12 @@
             const ctx = canvas.getContext('2d');
             canvas.width = targetW; canvas.height = targetH;
             ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, cropData.sourceX, cropData.sourceY, cropData.sourceW, cropData.sourceH, 0, 0, targetW, targetH);
+            
+            if (cropData) {
+                ctx.drawImage(img, cropData.sourceX, cropData.sourceY, cropData.sourceW, cropData.sourceH, 0, 0, targetW, targetH);
+            } else {
+                ctx.drawImage(img, 0, 0, targetW, targetH);
+            }
             canvas.toBlob((blob) => resolve({ name: outName, blob }), 'image/jpeg', quality);
         });
     }
